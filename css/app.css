@@ -4,7 +4,7 @@
   --segTrack: rgba(118,118,128,0.12); --segSel: #FFFFFF;
   --label: #000000; --label2: rgba(60,60,67,0.6); --label3: rgba(60,60,67,0.3); --label4: rgba(60,60,67,0.3);
   --blue: #0088FF; --blueText: #0088FF; --blueSoft: rgba(0,136,255,0.12); --recup: #99CFFF;
-  --orange: #FF8D28; --orangeText: #F07A10; --orangeSoft: rgba(255,141,40,0.15);
+  --orange: #FF4F00; --orangeText: #FF4F00; --orangeSoft: rgba(255,79,0,0.12); --orangeDeep: #E64700;
   --mint: #00C8B3; --mintText: #00A896; --mintSoft: rgba(0,200,179,0.15);
   --red: #FF383C; --green: #34C759;
   --dashed: rgba(60,60,67,0.3);
@@ -28,7 +28,7 @@
   --segTrack: rgba(118,118,128,0.24); --segSel: #636366;
   --label: #FFFFFF; --label2: rgba(235,235,245,0.6); --label3: rgba(235,235,245,0.3); --label4: rgba(235,235,245,0.3);
   --blue: #0091FF; --blueText: #0091FF; --blueSoft: rgba(0,145,255,0.2); --recup: #8CC8FF;
-  --orange: #FF9230; --orangeText: #FF9230; --orangeSoft: rgba(255,146,48,0.18);
+  --orange: #FF4F00; --orangeText: #FF6A26; --orangeSoft: rgba(255,79,0,0.2); --orangeDeep: #FF4F00;
   --mint: #00DAC3; --mintText: #00DAC3; --mintSoft: rgba(0,218,195,0.16);
   --red: #FF4245; --green: #30D158;
   --dashed: rgba(235,235,245,0.3);
@@ -38,7 +38,7 @@
   --glassShadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -1px 1px rgba(255,255,255,0.06);
   --blur: blur(14px) saturate(180%) brightness(1.1);
   --tabSel: rgba(255,255,255,0.12);
-  --sideSel: rgba(255,255,255,0.14); --sideSelFg: #FFFFFF; --sideBadgeBg: rgba(255,146,48,0.18); --sideBadgeFg: #FF9230;
+  --sideSel: rgba(255,255,255,0.14); --sideSelFg: #FFFFFF; --sideBadgeBg: #FF4F00; --sideBadgeFg: #FFFFFF;
   --sheet: rgba(28,28,30,0.78); --sheetSolid: #000000; --group: rgba(255,255,255,0.07);
   --sheetFill: rgba(120,120,128,0.32); --sheetSegTrack: rgba(118,118,128,0.24); --sheetSegSel: #636366;
   --chipOn: #FFFFFF; --chipOnFg: #000000; --chipOff: rgba(120,120,128,0.24);
@@ -127,7 +127,7 @@ svg { flex-shrink: 0; display: block; }
 .meter-head .big { font-size: 20px; font-weight: 700; color: var(--label); }
 .meter-head .big small { font-size: 14px; font-weight: 600; color: var(--label2); }
 .meter-head .val { color: var(--label2); }
-.segs { display: flex; }
+.segs { display: flex; align-items: center; }
 .segs > span { flex: 1; min-width: 0; }
 .track { border-radius: 4px; background: var(--track); }
 .nbar { position: relative; border-radius: 4px; background: var(--track); }
@@ -190,7 +190,7 @@ svg { flex-shrink: 0; display: block; }
 .lmain .lt { font-size: 13px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pbtn { width: 104px; height: 44px; flex-shrink: 0; border: 0; border-radius: 22px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; }
 .pbtn.S { background: var(--fill); color: var(--label); }
-.pbtn.M { background: var(--orangeSoft); color: var(--orangeText); }
+.pbtn.M { background: var(--orange); color: #FFFFFF; box-shadow: 0 4px 12px rgba(255,79,0,0.3), inset 0 1px 1px rgba(255,255,255,0.35); }
 .pbtn.R { background: var(--blueSoft); color: var(--blueText); }
 .abtn { width: 44px; height: 44px; flex-shrink: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0; font-size: 14px; font-weight: 600; }
 .abtn.on { background: var(--mintSoft); color: var(--mintText); border: 0; }
@@ -347,7 +347,7 @@ svg { flex-shrink: 0; display: block; }
 .sitem .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sitem.on { background: var(--sideSel); color: var(--sideSelFg); font-weight: 600; }
 .sitem .ib { width: 28px; display: flex; justify-content: center; }
-.sbadge { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; background: var(--orangeSoft); color: var(--orangeText); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.sbadge { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; background: var(--orange); color: #FFFFFF; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .sitem.on .sbadge { background: var(--sideBadgeBg); color: var(--sideBadgeFg); }
 .sitem.add { color: var(--blueText); }
 .wside .bottom { margin-top: auto; padding-top: 12px; }
@@ -425,3 +425,20 @@ svg { flex-shrink: 0; display: block; }
 /* Colore personalizzato */
 .swatch.custom { position: relative; overflow: hidden; background: conic-gradient(#FF383C, #FFCC00, #34C759, #00C3D0, #6155F5, #CB30E0, #FF383C); color: #FFFFFF; cursor: pointer; }
 .swatch.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
+
+/* ---------- Lezioni da recuperare: più urgenza senza avvisi in più ---------- */
+.kval.alert { color: var(--orangeText); font-size: 34px; }
+.kval.alert small { color: var(--orangeText); opacity: 0.8; }
+.wsum .kval.alert { font-size: 30px; }
+.ibadge-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.ibadge { position: absolute; top: -6px; right: -7px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--orange); color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px var(--card); }
+.tag.orange.solid { background: var(--orange); color: #FFFFFF; box-shadow: 0 4px 12px rgba(255,79,0,0.28); }
+.miss-legend { color: var(--orangeText); font-weight: 600; }
+.lrow.miss .ld { color: var(--orangeText); font-weight: 600; }
+.miss-hero { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; background: transparent; color: var(--label); text-align: left; padding: 0 0 14px; border-bottom: 0.5px solid var(--sep); }
+.miss-hero .mh-num { font-size: 52px; font-weight: 700; line-height: 1; color: var(--orangeText); }
+.miss-hero .mh-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.miss-hero .mh-txt b { font-size: 17px; font-weight: 600; color: var(--orangeText); }
+.miss-hero .mh-txt span { font-size: 13px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.miss-hero svg { color: var(--label3); }
+.miss-pill { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 11px; background: var(--orange); color: #FFFFFF; font-size: 12px; font-weight: 700; }

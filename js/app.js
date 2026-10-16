@@ -235,22 +235,24 @@ const codeIcon = (c, size, radius, font) =>
 function segBar(L, h = 8) {
   if (!L.length) return `<div class="track" style="height:${h}px"></div>`;
   const dense = L.length > 24;
-  return `<div class="segs" style="gap:${dense ? 2 : 3}px">${L.map((l) => `<span style="height:${h}px;border-radius:${dense ? 2 : 4}px;background:${SEGV[l.p]}"></span>`).join('')}</div>`;
+  const hasM = L.some((l) => l.p === 'M'), hm = Math.round(h * 1.75);
+  // Le lezioni perse sono più alte: il "buco" si vede subito, come nei grafici di Salute.
+  return `<div class="segs" style="gap:${dense ? 2 : 3}px;${hasM ? `height:${hm}px;` : ''}">${L.map((l) => `<span style="height:${l.p === 'M' ? hm : h}px;border-radius:${dense ? 2 : (l.p === 'M' ? hm / 2 : 4)}px;background:${SEGV[l.p]}"></span>`).join('')}</div>`;
 }
 function notesBar(p, knob = true, h = 8) {
   return `<div class="nbar" style="height:${h}px"><div class="nfill" style="width:${p}%"></div>${knob ? `<div class="knob" style="left:clamp(-2px, calc(${p}% - 9px), calc(100% - 16px))"></div>` : ''}</div>`;
 }
-function rings(size, pA, pB, aria) {
+function rings(size, pA, pB, aria, pM = 0) {
   const cA = 2 * Math.PI * 46, cB = 2 * Math.PI * 30;
   const arc = (r, c, p, col) => `<circle cx="54" cy="54" r="${r}" fill="none" stroke="${col}" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(1)} 999" transform="rotate(-90 54 54)"${p <= 0 ? ' stroke-opacity="0"' : ''}/>`;
   return `<svg width="${size}" height="${size}" viewBox="0 0 108 108" role="img" aria-label="${esc(aria)}">
-    <circle cx="54" cy="54" r="46" fill="none" stroke="var(--blue)" stroke-opacity="0.18" stroke-width="13"/>${arc(46, cA, pA, 'var(--blue)')}
+    <circle cx="54" cy="54" r="46" fill="none" stroke="var(--blue)" stroke-opacity="0.18" stroke-width="13"/>${pM > 0 ? `<circle cx="54" cy="54" r="46" fill="none" stroke="var(--orange)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(cA * pM).toFixed(1)} 999" stroke-dashoffset="${(-cA * pA).toFixed(1)}" transform="rotate(-90 54 54)"/>` : ''}${arc(46, cA, pA, 'var(--blue)')}
     <circle cx="54" cy="54" r="30" fill="none" stroke="var(--mint)" stroke-opacity="0.2" stroke-width="13"/>${arc(30, cB, pB, 'var(--mint)')}
   </svg>`;
 }
 function ringsFor(ss, size) {
-  const pA = ss.total ? ss.inPari / ss.total : 0, pB = ss.total ? ss.notes / ss.total : 0;
-  return rings(size, pA, pB, `${ss.inPari} lezioni in pari su ${ss.total}, ${ss.notes} appunti sistemati`);
+  const pA = ss.total ? ss.inPari / ss.total : 0, pB = ss.total ? ss.notes / ss.total : 0, pM = ss.total ? ss.m / ss.total : 0;
+  return rings(size, pA, pB, `${ss.inPari} lezioni in pari su ${ss.total}, ${ss.m} da recuperare, ${ss.notes} appunti sistemati`, pM);
 }
 function navBar(active, courseId) {
   const can = curCourses().length > 0;
@@ -295,27 +297,39 @@ function noCourses() {
 }
 
 /* ---------- Home (iPhone) ---------- */
+// Icona del corso con il badge delle lezioni perse, come i badge delle app iOS.
+const badged = (icon, m) => (m ? `<span class="ibadge-wrap">${icon}<span class="ibadge" aria-label="${m} da recuperare">${m}</span></span>` : icon);
+function missHero(st) {
+  if (!st.m) return '';
+  const missed = st.L.map((l, i) => ({ l, n: i + 1 })).filter((x) => x.l.p === 'M');
+  const list = missed.slice(-3).reverse().map((x) => `Lez. ${x.n} · ${fmtShort(x.l.date)}`).join(', ') + (missed.length > 3 ? '…' : '');
+  return `<button class="miss-hero" data-act="filter" data-filter="miss">
+    <span class="mh-num">${st.m}</span><span class="mh-txt"><b>${plural(st.m, 'lezione da recuperare', 'lezioni da recuperare')}</b><span>${list}</span></span>${I.chev(14, 2.8)}
+  </button>`;
+}
+// Corsi con lezioni da recuperare per primi (stabile per gli altri).
+const byUrgency = (list) => list.map((c, i) => ({ c, i, m: stats(c).m })).sort((a, b) => b.m - a.m || a.i - b.i).map((x) => x.c);
 function courseCard(c) {
   const st = stats(c);
   const np = pct(st.upTo, st.total);
   const meta = [c.cfu ? c.cfu + ' CFU' : '', c.prof, daysLabel(c.days)].filter(Boolean).join(' · ') || 'Tocca per i dettagli';
-  return `<article class="card course">
+  return `<article class="card course ${st.m ? 'has-miss' : ''}">
     <div class="course-head">
-      ${codeIcon(c, 40, 11, 14)}
+      ${badged(codeIcon(c, 40, 11, 14), st.m)}
       <a class="course-name" href="#/corso/${c.id}"><b>${esc(c.name)}</b><span>${esc(meta)}</span></a>
       <button class="add-lesson" data-act="new-lesson" data-id="${c.id}" aria-label="Aggiungi lezione a ${esc(c.name)}">${I.plus(15)}Lezione</button>
     </div>
     <a class="meter" href="#/corso/${c.id}">
       <div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="big">${st.inPari}<small> / ${st.total}</small></span></div>
       <div role="img" aria-label="${st.inPari} lezioni in pari su ${st.total}, ${st.m} da recuperare">${segBar(st.L)}</div>
-      <div class="mini-legend"><span><i class="dot" style="background:var(--blue)"></i>${st.s} seguite</span><span><i class="dot" style="background:var(--recup)"></i>${st.r} recuperate</span><span><i class="dot" style="background:var(--orange)"></i>${st.m} da recuperare</span></div>
+      <div class="mini-legend"><span><i class="dot" style="background:var(--blue)"></i>${st.s} seguite</span><span><i class="dot" style="background:var(--recup)"></i>${st.r} recuperate</span><span class="${st.m ? 'miss-legend' : ''}"><i class="dot" style="background:var(--orange)"></i>${st.m} da recuperare</span></div>
     </a>
     <a class="meter" href="#/corso/${c.id}">
       <div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${notesLabel(st)}</span></div>
       <div role="img" aria-label="Appunti sistemati fino alla lezione ${st.upTo} su ${st.total}">${notesBar(np)}</div>
     </a>
     ${st.m || st.gap ? `<div class="tags">
-      ${st.m ? `<button class="tag orange" data-act="goto-filter" data-filter="miss" data-id="${c.id}">${I.warn(12)}${st.m} da recuperare</button>` : ''}
+      ${st.m ? `<button class="tag orange solid" data-act="goto-filter" data-filter="miss" data-id="${c.id}">${I.warn(12)}${st.m} da recuperare</button>` : ''}
       ${st.gap ? `<button class="tag mint" data-act="goto-filter" data-filter="notes" data-id="${c.id}">${I.doc(12)}${st.gap} ${plural(st.gap, 'appunto indietro', 'appunti indietro')}</button>` : ''}
     </div>` : ''}
   </article>`;
@@ -326,7 +340,7 @@ function summaryCard(courses) {
     <div class="summary-top">
       ${ringsFor(ss, 108)}
       <div class="summary-nums">
-        <div class="knum"><span class="klabel" style="color:var(--orangeText)">${I.warn(13)}Da recuperare</span><span class="kval">${ss.m} <small>${plural(ss.m, 'lezione', 'lezioni')}</small></span></div>
+        <div class="knum"><span class="klabel" style="color:${ss.m ? 'var(--orangeText)' : 'var(--label2)'}">${I.warn(13)}Da recuperare</span><span class="kval ${ss.m ? 'alert' : ''}">${ss.m} <small>${plural(ss.m, 'lezione', 'lezioni')}</small></span></div>
         <div class="knum"><span class="klabel" style="color:var(--mintText)">${I.doc(13)}Appunti da sistemare</span><span class="kval">${ss.gap} <small>${plural(ss.gap, 'lezione', 'lezioni')}</small></span></div>
       </div>
     </div>
@@ -347,7 +361,7 @@ function phoneHome() {
     ${summaryCard(courses)}
     ${remindBanner()}
     <div class="sec-head"><h2 class="title2">Corsi</h2><span class="sub">${courses.length} ${plural(courses.length, 'attivo', 'attivi')}</span></div>
-    <div class="stack mx">${courses.map(courseCard).join('')}</div>
+    <div class="stack mx">${byUrgency(courses).map(courseCard).join('')}</div>
     <button class="add-course" data-act="new-course">${I.plus(16)}Aggiungi corso</button>
   </div>${navBar('home')}`;
 }
@@ -356,12 +370,12 @@ function phoneHome() {
 function lessonRow(l, n, c, ro) {
   const P = { S: ['Presente', I.check(14)], M: ['Saltata', I.warn(14)], R: ['Recuperata', I.recup(14)] }[l.p];
   const aria = { S: 'presente', M: 'saltata, da recuperare', R: 'recuperata' }[l.p];
-  return `<li class="lrow" data-id="${l.id}" data-course="${c.id}">
+  return `<li class="lrow ${l.p === 'M' ? 'miss' : ''}" data-id="${l.id}" data-course="${c.id}">
     <div class="sw-bg l"><span>${I.recup(20, 2.4)}Recuperata</span></div>
     <div class="sw-bg r"><span>${I.docCheck(20)}${l.a ? 'Da sistemare' : 'Sistemati'}</span></div>
     <div class="lrow-fg">
       <div class="lmain" data-act="edit-lesson" data-id="${l.id}" data-course="${c.id}">
-        <span class="lhead"><span class="ln">Lezione ${n}</span><span class="ld">${fmtShort(l.date)}</span></span>
+        <span class="lhead"><span class="ln">Lezione ${n}</span><span class="ld">${fmtShort(l.date)}${l.p === 'M' ? ' · da recuperare' : ''}</span></span>
         <span class="lt ${l.topic ? '' : 'none'}">${esc(l.topic || 'Argomento non indicato')}</span>
       </div>
       <button class="pbtn ${l.p}" data-act="cycle" data-id="${l.id}" data-course="${c.id}" aria-label="Lezione ${n}: ${aria}. Tocca per cambiare stato">${P[1]}${P[0]}</button>
@@ -382,11 +396,12 @@ function courseDetail(c, wide) {
   return `
     <header class="chead">${codeIcon(c, 52, 14, 18)}<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><h1>${esc(c.name)}</h1>${meta ? `<span class="sub">${esc(meta)}</span>` : ''}</div></header>
     <section class="card stats ${wide ? '' : 'mx'}" aria-label="Statistiche" style="${wide ? '' : 'margin-top:20px'}">
+      ${missHero(st)}
       <div class="stat-grid ${wide ? 'four' : ''}">
         <div class="stat"><span>Svolte</span><b>${st.total}</b></div>
         <div class="stat"><span style="color:var(--blueText)">Presenze</span><b>${pct(st.s, st.total)}<small>%</small></b></div>
         <div class="stat"><span style="color:var(--mintText)">Appunti</span><b>${pct(st.done, st.total)}<small>%</small></b></div>
-        ${wide ? `<div class="stat"><span style="color:var(--orangeText)">Da recuperare</span><b>${st.m}</b></div>` : ''}
+        ${wide ? `<div class="stat"><span style="color:${st.m ? 'var(--orangeText)' : 'var(--label2)'}">Da recuperare</span><b style="${st.m ? 'color:var(--orangeText)' : ''}">${st.m}</b></div>` : ''}
       </div>
       <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="val">${st.inPari} / ${st.total}</span></div>${segBar(st.L)}</div>
       <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${st.total && st.upTo === st.total ? 'Tutti sistemati' : notesLabel(st)}</span></div>${notesBar(pct(st.upTo, st.total))}</div>
@@ -510,10 +525,10 @@ function sideOpen() { return ui.side == null ? window.innerWidth >= 1100 : ui.si
 function wideCard(c, sel) {
   const st = stats(c);
   return `<a class="wcard ${sel ? 'on' : ''}" href="#/corso/${c.id}" aria-current="${sel}">
-    <span class="r1">${codeIcon(c, 30, 8, 11)}<span class="nm">${esc(c.name)}</span><b>${st.inPari}<small> / ${st.total}</small></b></span>
+    <span class="r1">${badged(codeIcon(c, 30, 8, 11), st.m)}<span class="nm">${esc(c.name)}</span><b>${st.inPari}<small> / ${st.total}</small></b></span>
     ${segBar(st.L, 7)}
     ${notesBar(pct(st.upTo, st.total), false, 7)}
-    <span class="r3"><span>${!st.total ? 'Nessuna lezione' : st.upTo === st.total ? 'Appunti: tutti sistemati' : 'Appunti fermi alla Lez. ' + st.upTo}</span><b style="color:${st.m ? 'var(--orangeText)' : 'var(--blueText)'}">${st.m ? st.m + ' da recuperare' : 'In pari'}</b></span>
+    <span class="r3"><span>${!st.total ? 'Nessuna lezione' : st.upTo === st.total ? 'Appunti: tutti sistemati' : 'Appunti fermi alla Lez. ' + st.upTo}</span>${st.m ? `<b class="miss-pill">${I.warn(11)}${st.m} da recuperare</b>` : '<b style="color:var(--blueText)">In pari</b>'}</span>
   </a>`;
 }
 function viewWide(r) {
@@ -551,11 +566,11 @@ function viewWide(r) {
       <section class="wover" data-scroll="over" aria-label="Panoramica">
         ${semesterHead(sem).replace('class="head"', 'class="head" style="padding:4px 4px 6px"')}
         <div class="card wsum">${ringsFor(semStats(courses), 92)}<div class="summary-nums" style="gap:10px">
-          <div class="knum"><span class="klabel" style="color:var(--orangeText)">Da recuperare</span><span class="kval">${semStats(courses).m} <small>lezioni</small></span></div>
+          <div class="knum"><span class="klabel" style="color:${semStats(courses).m ? 'var(--orangeText)' : 'var(--label2)'}">Da recuperare</span><span class="kval ${semStats(courses).m ? 'alert' : ''}">${semStats(courses).m} <small>lezioni</small></span></div>
           <div class="knum"><span class="klabel" style="color:var(--mintText)">Appunti da sistemare</span><span class="kval">${semStats(courses).gap} <small>lezioni</small></span></div>
         </div></div>
         ${remindBanner()}
-        ${courses.map((c) => wideCard(c, c.id === selId)).join('')}
+        ${byUrgency(courses).map((c) => wideCard(c, c.id === selId)).join('')}
       </section>
       <section class="wdetail" data-scroll="detail" aria-label="Dettaglio corso">${sel ? courseDetail(sel, true) : ''}</section>
     </div>`;
