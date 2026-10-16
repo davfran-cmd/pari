@@ -441,4 +441,61 @@ svg { flex-shrink: 0; display: block; }
 .miss-hero .mh-txt b { font-size: 17px; font-weight: 600; color: var(--orangeText); }
 .miss-hero .mh-txt span { font-size: 13px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .miss-hero svg { color: var(--label3); }
-.miss-pill { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 11px; background: var(--orange); color: #FFFFFF; font-size: 12px; font-weight: 700; }
+/* ---------- Libretto ---------- */
+/* Anello CFU in stile Fitness: gradiente vivo su una traccia dello stesso colore, numeri arrotondati (SF Rounded) */
+:root { --ringA: #5EF2E0; --ringB: #00C8B3; --ringTrack: rgba(0,200,179,0.16); --rounded: ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, sans-serif; }
+:root[data-theme="dark"] { --ringA: #7DFBEA; --ringB: #00DAC3; --ringTrack: rgba(0,218,195,0.2); }
+.lib-sum { padding: 18px; display: flex; align-items: center; gap: 18px; }
+.lib-ring { position: relative; flex-shrink: 0; border: 0; padding: 0; background: transparent; color: var(--label); display: flex; }
+.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--mintText); }
+.ring-center b { font-family: var(--rounded); font-size: 32px; font-weight: 700; line-height: 1; color: var(--label); }
+.ring-center span { font-size: 12px; font-weight: 600; color: var(--label2); margin-top: 3px; }
+.lib-nums { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.lib-nums .klabel { color: var(--label2); }
+.lib-nums .kval { font-size: 20px; }
+.lib-nums .kval small { font-size: 13px; }
+.lib-big { font-family: var(--rounded); font-size: 40px; font-weight: 700; line-height: 1.05; color: var(--blueText); }
+.lib-setup { padding: 34px 32px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.lib-setup h2 { margin-top: 10px; font-size: 22px; font-weight: 700; line-height: 1.2; }
+.lib-setup p { font-size: 15px; line-height: 1.4; color: var(--label2); }
+.dg { display: flex; flex-direction: column; gap: 1px; padding: 8px 0; text-align: left; }
+.dg b { font-size: 17px; font-weight: 400; }
+.dg small { font-size: 13px; color: var(--label2); }
+.sec-row { display: flex; justify-content: space-between; align-items: baseline; }
+.exrow { min-height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 14px 0 0; }
+.exrow + .exrow { box-shadow: inset 0 0.5px 0 var(--sep); }
+.ex-main { flex: 1; min-width: 0; min-height: 60px; padding: 8px 0 8px 16px; border: 0; background: transparent; color: var(--label); display: flex; align-items: center; gap: 12px; text-align: left; }
+.ex-main > svg { color: var(--blue); }
+.ex-main .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ex-main .t b { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-main .t span { font-size: 13px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grade { min-width: 48px; height: 34px; padding: 0 10px; border-radius: 17px; background: var(--blueSoft); color: var(--blueText); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.grade.lode { background: var(--tint); color: #FFFFFF; box-shadow: var(--tintShadow); }
+.grade.ido { background: var(--mintSoft); color: var(--mintText); font-size: 14px; font-weight: 600; }
+/* Pulsante a comparsa (pop-up button di iOS): testo + doppia freccia, il menu è quello di sistema */
+.popup { position: relative; height: 34px; padding: 0 10px 0 12px; border-radius: 17px; background: var(--fill); color: var(--blueText); display: flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 15px; font-weight: 600; }
+.popup select { border: 0; background: transparent; color: inherit; font: inherit; padding: 0; -webkit-appearance: none; appearance: none; outline: none; text-align: center; text-align-last: center; }.popup.on { background: var(--orangeSoft); color: var(--orangeText); font-size: 17px; font-weight: 700; }
+.sim-card { padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+.sim-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--orangeSoft); color: var(--orangeText); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sim-card .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sim-card .t span { font-size: 13px; color: var(--label2); }
+.sim-card .t b { font-size: 26px; font-weight: 700; color: var(--orangeText); line-height: 1.15; }
+.sim-card .t b small { font-size: 15px; font-weight: 600; color: var(--label2); }
+.sim-card .t b small.up { color: var(--green); }
+.sim-card .t b small.down { color: var(--red); }
+.sim-reset { height: 34px; padding: 0 14px; background: var(--fill); color: var(--label); font-size: 14px; }
+.target-card { width: calc(100% - 32px); padding: 14px 16px; border: 0; display: flex; align-items: center; gap: 12px; text-align: left; color: var(--label); }
+.target-card .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.target-card .t b { font-size: 17px; font-weight: 600; }
+.target-card .t span { font-size: 13px; color: var(--label2); line-height: 1.35; }
+.target-card .t .lbl { font-weight: 600; color: var(--orangeText); }
+.target-card .t b.need { font-size: 34px; font-weight: 700; line-height: 1.1; }
+.target-card .t b.need.ok { color: var(--green); }
+.target-card .t b.need.bad { color: var(--red); }
+.target-card > svg:last-child { color: var(--label4); }
+.ex-go { display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 600; color: var(--blueText); flex-shrink: 0; }
+.grades { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.grades .day { padding: 0; font-size: 15px; }
+.wshell .target-card { width: calc(100% - 32px); }
+
+.miss-pill {display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 11px; background: var(--orange); color: #FFFFFF; font-size: 12px; font-weight: 700; }

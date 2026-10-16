@@ -47,7 +47,12 @@ const I = {
   share: (s = 17) => sv(s, '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>', STROKE(2.2)),
   download: (s = 17) => sv(s, '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>', STROKE(2.2)),
   trash: (s = 17) => sv(s, '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>', STROKE(2)),
-  clock: (s = 17) => sv(s, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', STROKE(2))
+  clock: (s = 17) => sv(s, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', STROKE(2)),
+  bookO: (s = 24) => sv(s, '<path d="M12 6.6C10.2 5.2 7.6 4.6 4.3 4.6v13.2c3.3 0 5.9.6 7.7 2 1.8-1.4 4.4-2 7.7-2V4.6c-3.3 0-5.9.6-7.7 2z"/><path d="M12 6.6v13.2"/>', STROKE(1.9)),
+  bookF: (s = 24) => sv(s, '<path d="M11.2 5.7C9.3 4.4 6.8 3.8 3.6 3.8a.9.9 0 0 0-.9.9v13.2c0 .5.4.9.9.9 3 0 5.4.6 7.2 1.8.2.1.4 0 .4-.2z M12.8 5.7c1.9-1.3 4.4-1.9 7.6-1.9.5 0 .9.4.9.9v13.2c0 .5-.4.9-.9.9-3 0-5.4.6-7.2 1.8-.2.1-.4 0-.4-.2z"/>', 'fill="currentColor"'),
+  target: (s = 17) => sv(s, '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>', STROKE(2)),
+  updown: (s = 12) => sv(s, '<path d="m7 9 5-5 5 5M7 15l5 5 5-5"/>', STROKE(2.6)),
+  wand: (s = 17) => sv(s, '<path d="m4 20 11-11M14 4v3M12.5 5.5h3M19 9v3M17.5 10.5h3M8 3v2M7 4h2"/>', STROKE(2))
 };
 
 /* ---------- Utilità ---------- */
@@ -129,7 +134,7 @@ function autoCode(name) {
 
 /* ---------- Stato persistente ---------- */
 function defaultState() {
-  return { v: 1, theme: 'automatico', remind: true, remindDays: 3, auto: true, autoP: 'S', semesters: [], courses: [] };
+  return { v: 1, theme: 'automatico', remind: true, remindDays: 3, auto: true, autoP: 'S', semesters: [], courses: [], exams: [], degreeCfu: 180, target: '' };
 }
 function migrate(s) {
   const d = defaultState();
@@ -142,6 +147,7 @@ function migrate(s) {
     if (!Array.isArray(c.days)) c.days = parseDays(c.days);
     if (!c.autoUntil) c.autoUntil = yesterdayISO();
   });
+  out.exams = Array.isArray(out.exams) ? out.exams.filter((e) => e && e.id) : [];
   return out;
 }
 function load() {
@@ -196,6 +202,45 @@ function staleNotes() {
   const out = [];
   curCourses().forEach((c) => c.lessons.forEach((l) => { if (!l.a && l.date <= limIso) out.push({ c, l }); }));
   return out;
+}
+
+/* ---------- Libretto ----------
+   Esame: { id, name, cfu, status: 'passed' | 'todo', kind: 'voto' | 'idoneita', grade: 18..31 (31 = 30 e lode),
+   date, sim (voto ipotetico degli esami da sostenere), courseId (facoltativo), tint, code }. */
+const GRADES = [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
+const gradeLabel = (g) => (g === 31 ? '30L' : String(g));
+const gradeValue = (g) => Math.min(30, g); // 30 e lode vale 30 nella media
+const examById = (id) => S.exams.find((e) => e.id === id) || null;
+const fmtNum = (n, d = 2) => n.toLocaleString('it-IT', { minimumFractionDigits: d, maximumFractionDigits: d });
+// Con un corso collegato l'esame ne usa colore e sigla; senza (o se il corso è stato eliminato) usa i propri.
+function examLook(e) {
+  const c = e.courseId && courseById(e.courseId);
+  return c ? { tint: c.tint, code: c.code || '?' } : { tint: e.tint || TINTS[0], code: e.code || autoCode(e.name) || '?' };
+}
+// Medie ponderata (sui CFU) e aritmetica. Con `sim` contano anche i voti ipotetici degli esami da sostenere.
+function libStats(sim) {
+  let w = 0, wc = 0, sum = 0, n = 0, cfu = 0, passed = 0;
+  S.exams.forEach((e) => {
+    const k = Number(e.cfu) || 0;
+    let g = 0;
+    if (e.status === 'passed') { cfu += k; passed++; if (e.kind !== 'idoneita') g = e.grade || 0; }
+    else if (sim && e.kind !== 'idoneita') g = e.sim || 0;
+    if (!g) return;
+    w += gradeValue(g) * k; wc += k; sum += gradeValue(g); n++;
+  });
+  return { avg: wc ? w / wc : null, arith: n ? sum / n : null, w, wc, cfu, passed };
+}
+// Voto medio che serve nei CFU che mancano alla laurea per arrivare alla media obiettivo.
+function targetInfo() {
+  const t = parseFloat(String(S.target).replace(',', '.'));
+  if (!t) return null;
+  const st = libStats(false);
+  const todo = S.exams.filter((e) => e.status !== 'passed');
+  const todoIdo = todo.filter((e) => e.kind === 'idoneita').reduce((a, e) => a + (Number(e.cfu) || 0), 0);
+  const total = Number(S.degreeCfu) || 0;
+  const left = total ? total - st.cfu - todoIdo : todo.filter((e) => e.kind !== 'idoneita').reduce((a, e) => a + (Number(e.cfu) || 0), 0);
+  if (left <= 0) return { t, left: 0, avg: st.avg };
+  return { t, left, avg: st.avg, need: (t * (st.wc + left) - st.w) / left, max: (st.w + 30 * left) / (st.wc + left) };
 }
 
 /* Aggiunge da sola le lezioni dei giorni in calendario, dall'ultimo controllo (autoUntil) a oggi.
@@ -255,13 +300,19 @@ function ringsFor(ss, size) {
   return rings(size, pA, pB, `${ss.inPari} lezioni in pari su ${ss.total}, ${ss.m} da recuperare, ${ss.notes} appunti sistemati`, pM);
 }
 function navBar(active, courseId) {
-  const can = curCourses().length > 0;
+  // Nel Libretto il tasto + aggiunge un esame (anche senza corsi), dopo aver scelto i CFU del corso di laurea.
+  const setup = active === 'lib-setup';
+  if (setup) active = 'lib';
+  const lib = active === 'lib';
+  const can = lib ? !setup : curCourses().length > 0;
+  const tab = (id, href, on, off, label) => `<a class="tab ${active === id ? 'on' : ''}" href="${href}" ${active === id ? 'aria-current="page"' : ''}>${active === id ? on : off}${label}</a>`;
   return `<nav class="nav" aria-label="Navigazione principale">
     <div class="tabbar glass">
-      <a class="tab ${active === 'home' ? 'on' : ''}" href="#/" ${active === 'home' ? 'aria-current="page"' : ''}>${active === 'home' ? I.grid() : I.gridO()}Semestre</a>
-      <a class="tab ${active === 'arch' ? 'on' : ''}" href="#/archivio" ${active === 'arch' ? 'aria-current="page"' : ''}>${active === 'arch' ? I.archF() : I.archO()}Archivio</a>
+      ${tab('home', '#/', I.grid(), I.gridO(), 'Semestre')}
+      ${tab('lib', '#/libretto', I.bookF(), I.bookO(), 'Libretto')}
+      ${tab('arch', '#/archivio', I.archF(), I.archO(), 'Archivio')}
     </div>
-    <button class="fab ${can ? '' : 'off'}" data-act="new-lesson" ${courseId ? `data-id="${courseId}"` : ''} aria-label="Registra lezione" ${can ? '' : 'disabled'}>${I.plus()}</button>
+    <button class="fab ${can ? '' : 'off'}" data-act="${lib ? 'new-exam' : 'new-lesson'}" ${courseId ? `data-id="${courseId}"` : ''} aria-label="${lib ? 'Aggiungi esame' : 'Registra lezione'}" ${can ? '' : 'disabled'}>${I.plus()}</button>
   </nav>`;
 }
 function semesterHead(sem) {
@@ -354,7 +405,7 @@ function phoneHome() {
     ${courses.length ? '<button class="glass gbtn" data-act="conclude">Concludi semestre</button>' : ''}
     <a class="glass gbtn circle" href="#/impostazioni" aria-label="Impostazioni">${I.person()}</a>
   </div>`;
-  if (!sem) return `<div class="page">${top}${welcome()}</div>`;
+  if (!sem) return `<div class="page">${top}${welcome()}</div>${navBar('home')}`;
   if (!courses.length) return `<div class="page">${top}${semesterHead(sem)}${noCourses()}</div>${navBar('home')}`;
   return `<div class="page">${top}${semesterHead(sem)}
     <h2 class="title2 sec-head first">In evidenza</h2>
@@ -457,6 +508,13 @@ function archiveBody() {
 function phoneArchive() {
   return `<div class="page"><div class="topbar"></div>${archiveBody()}</div>${navBar('arch')}`;
 }
+// Esame del corso nel Libretto: lo mostra se c'è, altrimenti propone di registrarlo già collegato.
+function courseExamLink(c) {
+  const e = S.exams.find((x) => x.courseId === c.id);
+  if (!e) return `<button class="add-course" data-act="new-exam" data-course="${c.id}">${I.bookO(18)}Registra l'esame nel Libretto</button>`;
+  const what = e.status !== 'passed' ? 'Da sostenere' : e.kind === 'idoneita' ? 'Idoneo' : 'Voto ' + gradeLabel(e.grade);
+  return `<h2 class="sec-label">Esame</h2><ul class="list mx exlist"><li class="exrow"><button class="ex-main" data-act="edit-exam" data-id="${e.id}">${I.bookF(22)}<span class="t"><b>${esc(what)}</b><span>Nel Libretto${e.cfu ? ' · ' + e.cfu + ' CFU' : ''}</span></span></button><a class="ex-go" href="#/libretto">Apri${I.chev(12, 2.8)}</a></li></ul>`;
+}
 function archCourseBody(c, withBar) {
   const st = stats(c);
   const sem = semById(c.semId);
@@ -471,9 +529,121 @@ function archCourseBody(c, withBar) {
       <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${notesLabel(st)}</span></div>${notesBar(pct(st.upTo, st.total), false)}</div>
       <button class="restore" data-act="restore" data-id="${c.id}">${I.restore()}Ripristina nel semestre attuale</button>
     </section>
+    ${courseExamLink(c)}
     <div class="sec-label" style="display:flex;justify-content:space-between;align-items:baseline"><span>Storico lezioni</span>${st.m ? `<span style="text-transform:none;font-weight:600;color:var(--orangeText)">${st.m} mai ${plural(st.m, 'recuperata', 'recuperate')}</span>` : ''}</div>
     <ol class="list mx">${rows.map(({ l, n }) => `<li class="rorow"><div class="t"><b>Lezione ${n}</b><span>${esc(clean(fmtDayMonth.format(parseISO(l.date))))}${l.topic ? ' · ' + esc(l.topic) : ''}</span></div><span class="ropill ${l.p}">${ST[l.p]}</span></li>`).join('') || '<li class="list-empty"><span>Nessuna lezione registrata.</span></li>'}</ol>
     <button class="text-btn" data-act="delete-course" data-id="${c.id}">Elimina dall'archivio</button>`;
+}
+
+/* ---------- Libretto ---------- */
+function examRow(e) {
+  const look = examLook(e);
+  const k = Number(e.cfu) || 0;
+  const info = e.status === 'passed'
+    ? [e.date ? clean(fmtDayMonth.format(parseISO(e.date))) + ' ' + e.date.slice(0, 4) : '', k ? k + ' CFU' : ''].filter(Boolean).join(' · ')
+    : (k ? k + ' CFU' : 'CFU non indicati') + (e.kind === 'idoneita' ? ' · idoneità' : '');
+  let right;
+  if (e.status === 'passed') {
+    right = e.kind === 'idoneita' ? '<span class="grade ido">Idoneo</span>' : `<span class="grade ${e.grade === 31 ? 'lode' : ''}">${gradeLabel(e.grade)}</span>`;
+  } else if (e.kind === 'idoneita') {
+    right = '';
+  } else {
+    // Voto ipotetico per la simulazione: pulsante a comparsa come i menu pop-up di iOS.
+    right = `<label class="popup ${e.sim ? 'on' : ''}"><select data-field="sim" data-id="${e.id}" aria-label="Voto ipotetico per ${esc(e.name)}">
+      <option value="">Simula</option>${GRADES.map((g) => `<option value="${g}" ${e.sim === g ? 'selected' : ''}>${gradeLabel(g)}</option>`).join('')}</select>${I.updown()}</label>`;
+  }
+  return `<li class="exrow"><button class="ex-main" data-act="edit-exam" data-id="${e.id}">${codeIcon(look, 36, 10, 13)}<span class="t"><b>${esc(e.name)}</b><span>${esc(info)}</span></span></button>${right}</li>`;
+}
+/* Anello dei CFU in stile Fitness: si chiude man mano che superi esami. Quando il valore cambia
+   (o entri nel Libretto) l'arco si anima dal valore precedente al nuovo. */
+function cfuRing(cfu, total, size) {
+  const p = total ? Math.min(1, cfu / total) : 0;
+  const r = 44, C = 2 * Math.PI * r, len = (C * p).toFixed(1);
+  const from = ui.ringFrom;
+  ui.ringFrom = p;
+  const anim = from !== p
+    ? `<animate attributeName="stroke-dasharray" from="${(C * (from || 0)).toFixed(1)} 999" to="${len} 999" dur="1s" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.85 0.3 1" fill="freeze"/>` : '';
+  return `<svg class="fring" width="${size}" height="${size}" viewBox="0 0 108 108" aria-hidden="true">
+    <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--ringA)"/><stop offset="1" stop-color="var(--ringB)"/></linearGradient></defs>
+    <circle cx="54" cy="54" r="${r}" fill="none" stroke="var(--ringTrack)" stroke-width="16"/>
+    ${p > 0 ? `<circle cx="54" cy="54" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="${len} 999" transform="rotate(-90 54 54)">${anim}</circle>` : ''}
+  </svg>`;
+}
+function libSummary(st) {
+  const total = Number(S.degreeCfu) || 0;
+  const done = total && st.cfu >= total;
+  return `<section class="card lib-sum mx" aria-label="CFU e media">
+    <button class="lib-ring" data-act="edit-degree" aria-label="${st.cfu} CFU acquisiti su ${total}. Tocca per cambiare i CFU del corso di laurea">
+      ${cfuRing(st.cfu, total, 136)}
+      <span class="ring-center">${done ? I.check(30, 3.4) : `<b>${st.cfu}</b><span>di ${total} CFU</span>`}</span>
+    </button>
+    <div class="lib-nums">
+      <div class="knum"><span class="klabel" style="color:var(--blueText)">Media ponderata</span><span class="lib-big">${st.avg != null ? fmtNum(st.avg) : '–'}</span></div>
+      <div class="knum"><span class="klabel">Base di laurea</span><span class="kval">${st.avg != null ? fmtNum(st.avg * 110 / 30, 1) : '–'} <small>/ 110</small></span></div>
+      <div class="knum"><span class="klabel">Media aritmetica</span><span class="kval">${st.arith != null ? fmtNum(st.arith) : '–'}</span></div>
+    </div>
+  </section>`;
+}
+const DEGREES = [[180, 'Laurea triennale', '3 anni'], [120, 'Laurea magistrale', '2 anni'], [300, 'Magistrale a ciclo unico', '5 anni'], [360, 'Magistrale a ciclo unico', '6 anni']];
+// Primo avvio del Libretto: prima di tutto serve il totale dei CFU del corso di laurea.
+function degreeSetup() {
+  return `<section class="lib-setup">
+      <span class="lib-ring">${cfuRing(0, 0, 120)}<span class="ring-center">${I.bookF(34)}</span></span>
+      <h2>Quanti CFU vale il tuo corso di laurea?</h2>
+      <p>Serve a chiudere l'anello dei CFU e a calcolare il voto che ti serve per la media che vuoi. Puoi cambiarlo quando vuoi.</p>
+    </section>
+    <ul class="slist">${DEGREES.map(([v, t, y]) => `<li><button class="srow" data-act="set-degree" data-value="${v}"><span class="sbody"><span class="dg"><b>${t}</b><small>${y}</small></span><span class="v">${v} CFU${I.chev(14, 2.8)}</span></span></button></li>`).join('')}
+      <li><button class="srow" data-act="edit-degree"><span class="sbody">Altro<span class="v">${I.chev(14, 2.8)}</span></span></button></li>
+    </ul>`;
+}
+function libSimulation(st, todo) {
+  if (!todo.some((e) => e.kind !== 'idoneita')) return '';
+  const sim = libStats(true);
+  const used = todo.filter((e) => e.sim && e.kind !== 'idoneita').length;
+  if (!used) return `<p class="foot">Scegli un voto in “Simula” accanto agli esami da sostenere per vedere come cambierebbe la media.</p>`;
+  const diff = st.avg != null ? sim.avg - st.avg : null;
+  const sign = diff == null ? '' : diff > 0.004 ? 'up' : diff < -0.004 ? 'down' : '';
+  return `<section class="card sim-card mx" aria-label="Simulazione">
+    <span class="sim-ico">${I.wand(18)}</span>
+    <div class="t"><span>Con ${used} ${plural(used, 'voto simulato', 'voti simulati')}</span><b>${fmtNum(sim.avg)}${diff != null ? ` <small class="${sign}">${diff >= 0 ? '+' : '−'}${fmtNum(Math.abs(diff))}</small>` : ''}</b><span>Base di laurea ${fmtNum(sim.avg * 110 / 30, 1)}</span></div>
+    <button class="gbtn sim-reset" data-act="clear-sim">Azzera</button>
+  </section>`;
+}
+function libTarget() {
+  const ti = targetInfo();
+  if (!ti) {
+    return `<button class="card target-card mx" data-act="edit-target"><span class="sicon" style="background:#FF8D28">${I.target()}</span><span class="t"><b>Imposta una media obiettivo</b><span>Ti dico che voto ti serve negli esami che mancano</span></span>${I.chev(14, 2.8)}</button>`;
+  }
+  let big, msg, cls = '';
+  if (!ti.left) { big = ti.avg != null ? fmtNum(ti.avg) : '–'; msg = 'Hai già tutti i CFU del corso di laurea: questa è la tua media finale.'; }
+  else if (ti.need <= 18) { big = '18'; cls = 'ok'; msg = `Obiettivo al sicuro: ti basta superare gli esami dei ${ti.left} CFU che mancano.`; }
+  else if (ti.need > 30) { big = fmtNum(ti.need, 1); cls = 'bad'; msg = `Non raggiungibile: anche con tutti 30 nei ${ti.left} CFU che mancano arrivi a ${fmtNum(ti.max)}.`; }
+  else { big = fmtNum(ti.need, 1); msg = `È il voto medio che ti serve nei ${ti.left} CFU che mancano.`; }
+  return `<button class="card target-card mx" data-act="edit-target"><span class="sicon" style="background:#FF8D28">${I.target()}</span>
+    <span class="t"><span class="lbl">Obiettivo ${fmtNum(ti.t)}</span><b class="need ${cls}">${big}</b><span>${msg}</span></span>${I.chev(14, 2.8)}</button>`;
+}
+function librettoBody() {
+  const head = (sub) => `<header class="head" style="padding-top:${wideMQ.matches ? 4 : 8}px"><h1 class="large-title">Libretto</h1><span class="sub">${sub}</span></header>`;
+  if (!S.degreeSet) return head('Esami, media e obiettivo') + degreeSetup();
+  const st = libStats(false);
+  if (!S.exams.length) {
+    return head(`Corso di laurea da ${S.degreeCfu} CFU`) + `<div style="margin-top:18px">${libSummary(st)}</div>
+      <section class="empty" style="padding-top:28px"><h2>Nessun esame</h2>
+      <p>Aggiungi gli esami superati con voto e CFU: l'anello si chiude man mano. Puoi inserire anche quelli da sostenere per simulare i voti.</p>
+      <button class="pill-btn" data-act="new-exam">${I.plus(18)}Aggiungi esame</button></section>`;
+  }
+  const passed = S.exams.filter((e) => e.status === 'passed').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const todo = S.exams.filter((e) => e.status !== 'passed');
+  return head(`${st.passed} ${plural(st.passed, 'esame superato', 'esami superati')} · ${st.cfu} CFU`) + `
+    <div style="margin-top:18px">${libSummary(st)}</div>
+    <h2 class="sec-label">Obiettivo</h2>${libTarget()}
+    ${todo.length ? `<div class="sec-label sec-row"><span>Da sostenere · ${todo.length}</span></div>${libSimulation(st, todo)}<ul class="list mx exlist" style="margin-top:${todo.some((e) => e.sim) ? 12 : 8}px">${todo.map(examRow).join('')}</ul>` : ''}
+    ${passed.length ? `<h2 class="sec-label">Superati · ${passed.length}</h2><ul class="list mx exlist">${passed.map(examRow).join('')}</ul>` : ''}
+    <button class="add-course" data-act="new-exam">${I.plus(16)}Aggiungi esame</button>
+    <p class="foot">Il 30 e lode vale 30 nella media. Gli esami a idoneità contano nei CFU ma non nella media.</p>`;
+}
+function phoneLibretto() {
+  return `<div class="page"><div class="topbar end"><a class="glass gbtn circle" href="#/impostazioni" aria-label="Impostazioni">${I.person()}</a></div>${librettoBody()}</div>${navBar(S.degreeSet ? 'lib' : 'lib-setup')}`;
 }
 
 /* ---------- Impostazioni ---------- */
@@ -506,6 +676,12 @@ function settingsBody() {
       ${sem && curCourses().length ? `<li><button class="srow" data-act="conclude"><span class="sicon" style="background:#FF8D28">${I.box()}</span><span class="sbody">Concludi semestre<span class="v">${I.chev(14, 2.8)}</span></span></button></li>` : ''}
     </ul>
     <p class="foot">Con le lezioni automatiche, ogni giorno di lezione del corso compare da solo nella lista: se l'hai saltata tocca lo stato. Se elimini una lezione (es. vacanza) non viene ricreata. Il promemoria mostra un avviso nella Home quando hai appunti non sistemati da più giorni.</p>
+
+    <h2 class="sec-label" id="libretto">Libretto</h2>
+    <ul class="slist" aria-labelledby="libretto">
+      <li><button class="srow" data-act="edit-degree"><span class="sicon" style="background:#00C8B3">${I.bookF(18)}</span><span class="sbody">Corso di laurea<span class="v">${S.degreeSet ? S.degreeCfu + ' CFU' : 'Da scegliere'}${I.chev(14, 2.8)}</span></span></button></li>
+      <li><button class="srow" data-act="edit-target"><span class="sicon" style="background:#FF8D28">${I.target(18)}</span><span class="sbody">Media obiettivo<span class="v">${S.target ? fmtNum(S.target) : 'Nessuna'}${I.chev(14, 2.8)}</span></span></button></li>
+    </ul>
 
     <h2 class="sec-label" id="dati">Dati</h2>
     <ul class="slist" aria-labelledby="dati">
@@ -547,6 +723,7 @@ function viewWide(r) {
     ${courses.map((c) => { const m = stats(c).m; const on = onSemester && c.id === selId; return `<a class="sitem ${on ? 'on' : ''}" href="#/corso/${c.id}" ${on ? 'aria-current="page"' : ''}>${codeIcon(c, 28, 8, 11)}<span class="nm">${esc(c.name)}</span>${m ? `<span class="sbadge">${m}</span>` : ''}</a>`; }).join('')}
     ${sem ? `<button class="sitem add" data-act="new-course"><span class="ib">${I.plus(20, 2.4)}</span>Aggiungi corso</button>` : ''}
     <span class="grp lib">Libreria</span>
+    <a class="sitem ${r.name === 'lib' ? 'on' : ''}" href="#/libretto"><span class="ib" style="color:${r.name === 'lib' ? 'inherit' : 'var(--blue)'}">${I.bookF(22)}</span>Libretto</a>
     <a class="sitem ${r.name === 'archivio' || r.name === 'arch-corso' ? 'on' : ''}" href="#/archivio"><span class="ib" style="color:${r.name.startsWith('arch') ? 'inherit' : 'var(--blue)'}">${I.archF(22)}</span>Archivio</a>
     <div class="bottom"><a class="sitem ${r.name === 'settings' ? 'on' : ''}" href="#/impostazioni"><span class="ib" style="color:${r.name === 'settings' ? 'inherit' : 'var(--label2)'}">${I.sliders()}</span>Impostazioni</a></div>
   </aside>` : '';
@@ -574,6 +751,9 @@ function viewWide(r) {
       </section>
       <section class="wdetail" data-scroll="detail" aria-label="Dettaglio corso">${sel ? courseDetail(sel, true) : ''}</section>
     </div>`;
+  } else if (r.name === 'lib') {
+    if (S.degreeSet) top += `<button class="blue-pill" data-act="new-exam">${I.plus(18)}Esame</button>`;
+    body = `<div class="wsingle" data-scroll="single"><div class="inner">${librettoBody()}</div></div>`;
   } else if (r.name === 'archivio') {
     body = `<div class="wsingle" data-scroll="single"><div class="inner">${archiveBody()}</div></div>`;
   } else if (r.name === 'arch-corso') {
@@ -698,13 +878,58 @@ function sheetConclude() {
     <p class="sheet-note">Le lezioni da recuperare restano visibili nell'Archivio. Puoi ripristinare un corso nel semestre attuale quando vuoi.</p>
     <div style="margin-top:auto"><button class="primary" data-act="do-conclude">Archivia e inizia il nuovo</button></div>`;
 }
+const examOk = (s) => s.name.trim() && (s.status !== 'passed' || s.kind === 'idoneita' || !!s.grade);
+// Corsi da collegare: prima quelli del semestre attuale, poi gli archiviati dal più recente.
+function linkableCourses() {
+  const cur = curSem();
+  const rank = (c) => { const sem = semById(c.semId); return sem === cur ? Infinity : (sem && sem.archivedAt) || 0; };
+  return S.courses.slice().sort((a, b) => rank(b) - rank(a));
+}
+function sheetExam(s) {
+  const courses = linkableCourses();
+  const passed = s.status === 'passed';
+  return `${sheetHead(s.mode === 'new' ? 'Nuovo esame' : 'Modifica esame', 'save-exam', !examOk(s))}
+    ${courses.length ? `<div class="fgroup"><span class="field-label">Corso collegato (facoltativo)</span><div class="chips" role="radiogroup" aria-label="Corso collegato">
+      <button class="chip plain ${!s.courseId ? 'on' : ''}" role="radio" aria-checked="${!s.courseId}" data-act="exam-course" data-value="">Nessuno</button>
+      ${courses.map((c) => `<button class="chip ${c.id === s.courseId ? 'on' : ''}" role="radio" aria-checked="${c.id === s.courseId}" data-act="exam-course" data-value="${c.id}">${codeIcon(c, 28, 14, 11)}${esc(c.name)}</button>`).join('')}
+    </div></div>` : ''}
+    <div class="group">
+      <div class="grow"><input type="text" data-field="name" placeholder="Nome dell'esame" aria-label="Nome dell'esame" value="${esc(s.name)}" autocomplete="off" enterkeyhint="next"></div>
+      <div class="grow"><label for="f-ecfu">CFU</label><input id="f-ecfu" class="right" type="text" inputmode="numeric" pattern="[0-9]*" data-field="cfu" placeholder="6" value="${esc(s.cfu)}" autocomplete="off"></div>
+    </div>
+    <div class="fgroup"><span class="field-label">Stato</span>${sseg('status', [['passed', 'Superato', 'blue', I.check(14)], ['todo', 'Da sostenere', 'plain']], s.status)}</div>
+    <div class="fgroup"><span class="field-label">Valutazione</span>${sseg('kind', [['voto', 'Con voto', 'plain'], ['idoneita', 'Idoneità', 'plain']], s.kind)}</div>
+    ${passed && s.kind !== 'idoneita' ? `<div class="fgroup"><span class="field-label">Voto</span><div class="grades" role="radiogroup" aria-label="Voto">
+      ${GRADES.map((g) => `<button class="day ${+s.grade === g ? 'on' : ''}" role="radio" aria-checked="${+s.grade === g}" aria-label="${g === 31 ? '30 e lode' : g}" data-act="sfield" data-field="grade" data-value="${g}">${gradeLabel(g)}</button>`).join('')}
+    </div></div>` : ''}
+    ${passed ? `<div class="group"><div class="grow"><span>Data</span><input class="date-in" type="date" data-field="date" value="${esc(s.date)}" max="${todayISO()}" aria-label="Data dell'esame"></div></div>` : ''}
+    ${!passed && s.kind !== 'idoneita' ? '<p class="sheet-note">Negli esami da sostenere puoi scegliere un voto ipotetico dal Libretto, per simulare come cambierebbe la media.</p>' : ''}
+    ${s.mode === 'edit' ? '<button class="danger-btn" data-act="delete-exam">Elimina esame</button>' : ''}`;
+}
+function sheetTarget(s) {
+  return `${sheetHead('Obiettivo', 'save-target', false)}
+    <div class="group">
+      <div class="grow"><label for="f-tg">Media obiettivo</label><input id="f-tg" class="right" type="text" inputmode="decimal" data-field="target" placeholder="27,5" value="${esc(s.target)}" autocomplete="off"></div>
+    </div>
+    <p class="sheet-note">Pari calcola il voto medio che ti serve nei ${S.degreeCfu} CFU del corso di laurea che non hai ancora acquisito. Se alcuni esami da sostenere sono a idoneità, inseriscili nel Libretto come “Idoneità”: così non pesano nel calcolo.</p>
+    ${S.target ? '<button class="danger-btn" data-act="clear-target">Rimuovi obiettivo</button>' : ''}`;
+}
+function sheetDegree(s) {
+  const ok = parseInt(s.degreeCfu, 10) > 0;
+  return `${sheetHead('Corso di laurea', 'save-degree', !ok)}
+    <div class="group">
+      <div class="grow"><label for="f-dc">CFU totali</label><input id="f-dc" class="right" type="text" inputmode="numeric" pattern="[0-9]*" data-field="degreeCfu" placeholder="180" value="${esc(s.degreeCfu)}" autocomplete="off"></div>
+    </div>
+    <div class="chips">${DEGREES.map(([v, t, y]) => `<button class="chip plain ${s.degreeCfu === String(v) ? 'on' : ''}" data-act="sfield" data-field="degreeCfu" data-value="${v}">${v} · ${cap(t.replace('Laurea ', '').replace('Magistrale a ciclo unico', 'Ciclo unico ' + y))}</button>`).join('')}</div>
+    <p class="sheet-note">Di solito 180 CFU per la triennale e 120 per la magistrale. L'anello del Libretto si chiude quando li hai acquisiti tutti.</p>`;
+}
 function renderSheet() {
   const root = $('#sheet-root');
   const s = ui.sheet;
   if (!s) { root.innerHTML = ''; return; }
   const prev = root.querySelector('.sheet');
   const scroll = prev ? prev.scrollTop : 0;
-  const html = { lesson: sheetLesson, course: sheetCourse, semester: sheetSemester, conclude: sheetConclude, past: sheetPast }[s.type](s);
+  const html = { lesson: sheetLesson, course: sheetCourse, semester: sheetSemester, conclude: sheetConclude, past: sheetPast, exam: sheetExam, target: sheetTarget, degree: sheetDegree }[s.type](s);
   const full = s.type === 'conclude' && !wideMQ.matches;
   root.innerHTML = `<div class="backdrop" data-act="close-sheet"></div><section class="sheet ${full ? 'full' : ''} ${ui.sheetNew ? 'anim' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title">${html}</section>`;
   root.querySelector('.sheet').scrollTop = scroll;
@@ -731,6 +956,7 @@ function route() {
   if (p[0] === 'corso' && p[1]) return { name: 'corso', id: p[1] };
   if (p[0] === 'archivio') return p[1] ? { name: 'arch-corso', id: p[1] } : { name: 'archivio' };
   if (p[0] === 'impostazioni') return { name: 'settings' };
+  if (p[0] === 'libretto') return { name: 'lib' };
   return { name: 'home' };
 }
 function applyTheme() {
@@ -738,6 +964,7 @@ function applyTheme() {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   const meta = $('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', dark ? '#000000' : '#F2F2F7');
+  if (window.PariAndroid) window.PariAndroid.setTheme(dark);
 }
 function render() {
   applyTheme();
@@ -755,6 +982,7 @@ function render() {
   else if (r.name === 'archivio') app.innerHTML = phoneArchive();
   else if (r.name === 'arch-corso') app.innerHTML = `<div class="page no-nav">${archCourseBody(courseById(r.id), true)}</div>`;
   else if (r.name === 'settings') app.innerHTML = phoneSettings();
+  else if (r.name === 'lib') app.innerHTML = phoneLibretto();
   else app.innerHTML = phoneHome();
   app.querySelectorAll('[data-scroll]').forEach((el) => { if (scrolls[el.dataset.scroll]) el.scrollTop = scrolls[el.dataset.scroll]; });
   renderSheet();
@@ -765,6 +993,8 @@ window.addEventListener('hashchange', () => {
   const wasDetail = /^#\/corso\//.test(prev), isDetail = /^#\/corso\//.test(location.hash);
   if (!ui.keepFilter) ui.filter = 'all';
   ui.keepFilter = false;
+  ui.ringFrom = null; // entrando nel Libretto l'anello si richiude da zero
+
   render();
   if (!(wideMQ.matches && wasDetail && isDetail)) {
     window.scrollTo(0, 0);
@@ -905,9 +1135,65 @@ function deleteCourse(id) {
   location.hash = wasArch ? '#/archivio' : '#/';
   toast('Corso eliminato');
 }
+function newExam(courseId) {
+  const c = courseId ? courseById(courseId) : null;
+  openSheet({ type: 'exam', mode: 'new', courseId: c ? c.id : '', name: c ? c.name : '', cfu: c && c.cfu ? String(c.cfu) : '', status: 'passed', kind: 'voto', grade: '', date: todayISO() });
+}
+function editExam(id) {
+  const e = examById(id);
+  if (!e) return;
+  openSheet({ type: 'exam', mode: 'edit', id, courseId: e.courseId && courseById(e.courseId) ? e.courseId : '', name: e.name, cfu: e.cfu ? String(e.cfu) : '', status: e.status, kind: e.kind || 'voto', grade: e.grade ? String(e.grade) : '', date: e.date || todayISO() });
+}
+function saveExam() {
+  const s = ui.sheet;
+  if (!examOk(s)) return;
+  const c = s.courseId ? courseById(s.courseId) : null;
+  const name = s.name.trim();
+  const passed = s.status === 'passed';
+  const data = {
+    name, cfu: parseInt(s.cfu, 10) || 0, status: passed ? 'passed' : 'todo', kind: s.kind === 'idoneita' ? 'idoneita' : 'voto',
+    grade: passed && s.kind !== 'idoneita' ? +s.grade : null, date: passed ? (s.date || todayISO()) : '',
+    courseId: c ? c.id : null, code: c ? c.code : autoCode(name).slice(0, 3) || name.slice(0, 2).toUpperCase()
+  };
+  commit(() => {
+    if (s.mode === 'new') {
+      S.exams.push(Object.assign({ id: uid(), tint: c ? c.tint : TINTS[S.exams.length % TINTS.length], sim: null, createdAt: Date.now() }, data));
+    } else {
+      const e = examById(s.id);
+      if (e) { Object.assign(e, data); if (c) e.tint = c.tint; if (passed) e.sim = null; }
+    }
+    ui.sheet = null;
+  });
+  if (s.mode === 'new') toast(passed ? `Esame registrato · ${data.kind === 'idoneita' ? 'Idoneo' : gradeLabel(data.grade)}` : 'Esame aggiunto');
+}
+function pickExamCourse(id) {
+  const s = ui.sheet;
+  const prev = s.courseId ? courseById(s.courseId) : null;
+  const c = id ? courseById(id) : null;
+  s.courseId = c ? c.id : '';
+  // Riempie nome e CFU dal corso, senza cancellare quello che hai scritto a mano.
+  if (c && (!s.name.trim() || (prev && s.name === prev.name))) s.name = c.name;
+  if (c && c.cfu && (!s.cfu || (prev && s.cfu === String(prev.cfu)))) s.cfu = String(c.cfu);
+  renderSheet();
+}
+function saveTarget() {
+  const s = ui.sheet;
+  const t = parseFloat(String(s.target).replace(',', '.'));
+  if (s.target.trim() && !(t >= 18 && t <= 30)) { toast('La media obiettivo va da 18 a 30', true); return; }
+  commit(() => { S.target = t ? Math.round(t * 100) / 100 : ''; ui.sheet = null; });
+}
+function setDegree(v) {
+  const deg = parseInt(v, 10);
+  if (!(deg > 0)) return;
+  const first = !S.degreeSet;
+  commit(() => { S.degreeCfu = deg; S.degreeSet = true; ui.sheet = null; });
+  if (first) toast(`Corso di laurea da ${deg} CFU`);
+}
 async function exportData() {
   const name = `pari-backup-${todayISO()}.json`;
   const json = JSON.stringify({ app: 'pari', version: 1, exportedAt: new Date().toISOString(), state: S }, null, 2);
+  // App Android: salva il file con il selettore di sistema (la WebView non supporta share/download).
+  if (window.PariAndroid) { window.PariAndroid.saveFile(name, json); return; }
   const file = new File([json], name, { type: 'application/json' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], title: 'Backup Pari' }); return; }
@@ -958,6 +1244,22 @@ const ACT = {
     commit(() => { const c = courseById(s.courseId); c.lessons = c.lessons.filter((l) => l.id !== s.lessonId); ui.sheet = null; });
   },
   'delete-course': (d) => deleteCourse(d.id || (ui.sheet && ui.sheet.id)),
+  'new-exam': (d) => newExam(d.course),
+  'edit-exam': (d) => editExam(d.id),
+  'exam-course': (d) => pickExamCourse(d.value),
+  'save-exam': saveExam,
+  'delete-exam': () => {
+    const s = ui.sheet;
+    if (!confirm('Eliminare questo esame dal Libretto?')) return;
+    commit(() => { S.exams = S.exams.filter((e) => e.id !== s.id); ui.sheet = null; });
+  },
+  'clear-sim': () => commit(() => { S.exams.forEach((e) => { e.sim = null; }); }),
+  'edit-target': () => openSheet({ type: 'target', target: S.target ? fmtNum(S.target) : '', degreeCfu: S.degreeCfu ? String(S.degreeCfu) : '' }),
+  'save-target': saveTarget,
+  'set-degree': (d) => setDegree(d.value),
+  'edit-degree': () => openSheet({ type: 'degree', degreeCfu: S.degreeSet && S.degreeCfu ? String(S.degreeCfu) : '' }),
+  'save-degree': () => setDegree(ui.sheet.degreeCfu),
+  'clear-target': () => commit(() => { S.target = ''; ui.sheet = null; }),
   'sfield': (d) => {
     const s = ui.sheet;
     if (d.field === 'a') s.a = d.value === '1'; else s[d.field] = d.value;
@@ -978,7 +1280,7 @@ const ACT = {
   'export': exportData,
   'import': () => { const inp = $('#import-file'); inp.value = ''; inp.click(); },
   'wipe': () => {
-    if (!confirm('Cancellare tutti i semestri, i corsi e le lezioni da questo dispositivo?')) return;
+    if (!confirm('Cancellare tutti i semestri, i corsi, le lezioni e il libretto da questo dispositivo?')) return;
     if (!confirm('Sei sicuro? Se non hai un backup, i dati andranno persi.')) return;
     S = defaultState(); save(); ui.sel = null; location.hash = '#/'; render();
     toast('Dati cancellati');
@@ -1007,6 +1309,8 @@ document.addEventListener('input', (e) => {
     const ok = $('.sheet-head .ok'); if (ok) ok.disabled = !s.name.trim();
   }
   if (s.type === 'semester') { const ok = $('.sheet-head .ok'); if (ok) ok.disabled = !(s.title.trim() && s.year.trim()); }
+  if (s.type === 'exam') { const ok = $('.sheet-head .ok'); if (ok) ok.disabled = !examOk(s); }
+  if (s.type === 'degree') { const ok = $('.sheet-head .ok'); if (ok) ok.disabled = !(parseInt(s.degreeCfu, 10) > 0); }
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
@@ -1014,6 +1318,7 @@ document.addEventListener('change', (e) => {
   const f = t.dataset && t.dataset.field;
   if (f === 'autoP') { commit(() => { S.autoP = t.value; }); return; }
   if (f === 'remindDays') { commit(() => { S.remindDays = parseInt(t.value, 10) || 3; }); return; }
+  if (f === 'sim') { commit(() => { const e = examById(t.dataset.id); if (e) e.sim = parseInt(t.value, 10) || null; }); return; }
   if (f === 'date' && ui.sheet) { if (t.value) ui.sheet.date = t.value; renderSheet(); }
   if (f === 'start' && ui.sheet) { if (t.value) { ui.sheet.start = t.value; ui.sheet.startTouched = true; } renderSheet(); }
   if (f === 'tint' && ui.sheet) { ui.sheet.tint = t.value.toUpperCase(); renderSheet(); }
@@ -1065,6 +1370,15 @@ function endSwipe() {
 }
 document.addEventListener('touchend', endSwipe);
 document.addEventListener('touchcancel', endSwipe);
+
+/* ---------- App Android (wrapper WebView) ---------- */
+// Tasto Indietro: chiude il foglio aperto, poi torna alla schermata precedente; false = esci dall'app.
+window.pariBack = () => {
+  if (ui.sheet) { closeSheet(); return true; }
+  if (route().name !== 'home') { if (history.length > 1) history.back(); else location.hash = '#/'; return true; }
+  return false;
+};
+window.pariSaved = (ok) => toast(ok ? 'Backup salvato' : 'Impossibile salvare il backup', !ok);
 
 /* ---------- Avvio ---------- */
 render();
