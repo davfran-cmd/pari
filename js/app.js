@@ -3,7 +3,17 @@
 'use strict';
 
 const KEY = 'pari.state.v1';
-const TINTS = ['#AF52DE', '#FF2D55', '#5856D6', '#A2845E', '#30B0C7', '#34C759', '#FF3B30', '#8E8E93'];
+// Colori dei corsi: mai blu, arancione o menta (sono i colori di stato).
+const TINTS = [
+  '#CB30E0', '#FF2D55', '#6155F5', '#AC7F5E', '#00C3D0', '#34C759', '#FF383C', '#8E8E93',
+  '#9B5DE5', '#3F51B5', '#00C0E8', '#1E9E4A', '#A4C61A', '#FFCC00', '#FF6F91', '#C2185B',
+  '#7A5230', '#48484A', '#2C3E50', '#E84393'
+];
+const DAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+const DAY_LONG = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+const DAY_LETTER = ['D', 'L', 'M', 'M', 'G', 'V', 'S'];
+const WEEKDAYS = [1, 2, 3, 4, 5, 6];
+const MAX_WEEKS = 30;
 const SEGV = { S: 'var(--blue)', R: 'var(--recup)', M: 'var(--orange)' };
 const SWIPE_T = 90;
 
@@ -15,24 +25,24 @@ const I = {
   grid: (s = 24) => sv(s, '<rect x="3" y="3" width="8" height="8" rx="2.5"/><rect x="13" y="3" width="8" height="8" rx="2.5"/><rect x="3" y="13" width="8" height="8" rx="2.5"/><rect x="13" y="13" width="8" height="8" rx="2.5"/>', 'fill="currentColor"'),
   gridO: (s = 24) => sv(s, '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>', 'fill="none" stroke="currentColor" stroke-width="1.9"'),
   archO: (s = 24) => sv(s, '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>', STROKE(1.9)),
-  archF: (s = 24) => sv(s, '<rect x="2.5" y="3.5" width="19" height="6" rx="1.8"/><path d="M4.5 11h15v8a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 19v-8zm5.5 2v1.6h4V13h-4z"/>', 'fill="currentColor"'),
-  person: (s = 20) => sv(s, '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', STROKE(1.9)),
+  archF: (s = 24) => sv(s, '<rect x="2.6" y="3.6" width="18.8" height="5.6" rx="1.6"/><path d="M4.3 10.6h15.4v7.6a2.6 2.6 0 0 1-2.6 2.6H6.9a2.6 2.6 0 0 1-2.6-2.6z M10 13.1h4a.85.85 0 0 1 0 1.7h-4a.85.85 0 0 1 0-1.7z"/>', 'fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"'),
+  person: (s = 20) => sv(s, '<circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="9.8" r="3.1"/><path d="M6.3 18.6c1.3-1.9 3.3-2.9 5.7-2.9s4.4 1 5.7 2.9"/>', STROKE(1.7)),
   back: (s = 20) => sv(s, '<path d="m15 5-7 7 7 7"/>', STROKE(2.4)),
   close: (s = 16) => sv(s, '<path d="M6 6l12 12M18 6 6 18"/>', STROKE(2.8)),
   check: (s = 14, w = 2.8) => sv(s, '<path d="m5 12 5 5 9-10"/>', STROKE(w)),
-  warn: (s = 13) => sv(s, '<path d="M12 2 1 21h22L12 2zm-1 7h2v6h-2V9zm0 8h2v2h-2v-2z"/>', 'fill="currentColor"'),
+  warn: (s = 13) => sv(s, '<path d="M10.2 3.5a2.1 2.1 0 0 1 3.6 0l8.1 14.1a2.1 2.1 0 0 1-1.8 3.1H3.9a2.1 2.1 0 0 1-1.8-3.1z M12 8.3c.6 0 1.05.47 1.03 1.07l-.17 4.8a.86.86 0 0 1-1.72 0l-.17-4.8c-.02-.6.43-1.07 1.03-1.07z M12 16.1a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z"/>', 'fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"'),
   recup: (s = 14, w = 2.6) => sv(s, '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>', STROKE(w)),
-  doc: (s = 13) => sv(s, '<path d="M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5z"/>', 'fill="currentColor"'),
-  docCheck: (s = 18) => sv(s, '<path d="M6 2h9l5 5v15H6V2zm3.3 12.6-1.4 1.4 3 3 5.2-5.2-1.4-1.4-3.8 3.8-1.6-1.6z"/>', 'fill="currentColor"'),
-  docO: (s = 18) => sv(s, '<path d="M6 2.8h8.6L19.2 7.4V21.2H6z"/><path d="M14.4 3v4.6H19"/>', 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"'),
-  lock: (s = 12) => sv(s, '<path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1zm2 0h6V8a3 3 0 0 0-6 0v2z"/>', 'fill="currentColor"'),
+  doc: (s = 13) => sv(s, '<path d="M7.2 2.3h6.3c.6 0 1.1.2 1.5.6l4.1 4.1c.4.4.6.9.6 1.5v10.8a2.4 2.4 0 0 1-2.4 2.4H7.2a2.4 2.4 0 0 1-2.4-2.4V4.7a2.4 2.4 0 0 1 2.4-2.4z M9 11.4h6a.8.8 0 0 1 0 1.6H9a.8.8 0 0 1 0-1.6z M9 15h6a.8.8 0 0 1 0 1.6H9A.8.8 0 0 1 9 15z"/>', 'fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"'),
+  docCheck: (s = 18) => sv(s, '<path d="M7.2 2.3h6.3c.6 0 1.1.2 1.5.6l4.1 4.1c.4.4.6.9.6 1.5v10.8a2.4 2.4 0 0 1-2.4 2.4H7.2a2.4 2.4 0 0 1-2.4-2.4V4.7a2.4 2.4 0 0 1 2.4-2.4z M15.6 11.3a.9.9 0 0 0-1.27.06l-3.3 3.66-1.4-1.4a.9.9 0 1 0-1.27 1.27l2.07 2.07a.9.9 0 0 0 1.31-.03l3.92-4.36a.9.9 0 0 0-.06-1.27z"/>', 'fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"'),
+  docO: (s = 18) => sv(s, '<path d="M7.2 3.1h6.2l5.8 5.8v10.5a1.6 1.6 0 0 1-1.6 1.6H7.2a1.6 1.6 0 0 1-1.6-1.6V4.7a1.6 1.6 0 0 1 1.6-1.6z"/><path d="M13.3 3.2v4.2a1.5 1.5 0 0 0 1.5 1.5H19"/>', STROKE(1.7)),
+  lock: (s = 12) => sv(s, '<path d="M7.6 10.4V8a4.4 4.4 0 0 1 8.8 0v2.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="4.6" y="10" width="14.8" height="11.4" rx="2.6" fill="currentColor"/>', ''),
   restore: (s = 18) => sv(s, '<path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/>', STROKE(2.4)),
   chev: (s = 14, w = 2.8, cls = '') => sv(s, '<path d="m9 5 7 7-7 7"/>', STROKE(w) + (cls ? ` class="${cls}"` : '')),
   sidebar: (s = 22) => sv(s, '<rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M9.5 4.5v15M5.5 8.5h1.5M5.5 11h1.5"/>', STROKE(1.8)),
   sliders: (s = 22) => sv(s, '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>', STROKE(1.9)),
-  cal: (s = 17) => sv(s, '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>', STROKE(2)),
-  bell: (s = 16) => sv(s, '<path d="M12 22a2.5 2.5 0 0 0 2.4-2h-4.8A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5-6.7V4a2 2 0 0 0-4 0v.3A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/>', 'fill="currentColor"'),
-  box: (s = 16) => sv(s, '<rect x="2.5" y="3.5" width="19" height="6" rx="1.8"/><path d="M4.5 11h15v8a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 19v-8z"/>', 'fill="currentColor"'),
+  cal: (s = 17) => sv(s, '<rect x="3.2" y="4.6" width="17.6" height="16" rx="3"/><path d="M3.2 9.6h17.6M8 2.8v3.4M16 2.8v3.4"/>', STROKE(2)),
+  bell: (s = 16) => sv(s, '<path d="M12 2.4c.8 0 1.4.6 1.4 1.4v.45a6.1 6.1 0 0 1 4.7 5.95v3.5l1.55 2.25c.5.75-.03 1.75-.93 1.75H5.28c-.9 0-1.43-1-.93-1.75L5.9 13.7v-3.5a6.1 6.1 0 0 1 4.7-5.95V3.8c0-.8.6-1.4 1.4-1.4z M9.6 19.05h4.8a2.4 2.4 0 0 1-4.8 0z"/>', 'fill="currentColor"'),
+  box: (s = 16) => sv(s, '<rect x="2.6" y="3.6" width="18.8" height="5.6" rx="1.6"/><path d="M4.3 10.6h15.4v7.6a2.6 2.6 0 0 1-2.6 2.6H6.9a2.6 2.6 0 0 1-2.6-2.6z M10 13.1h4a.85.85 0 0 1 0 1.7h-4a.85.85 0 0 1 0-1.7z"/>', 'fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"'),
   folderPlus: (s = 64) => sv(s, '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10l2 2h6.5A1.5 1.5 0 0 1 20 7.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M12 10v6M9 13h6"/>', STROKE(1.4)),
   share: (s = 17) => sv(s, '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>', STROKE(2.2)),
   download: (s = 17) => sv(s, '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>', STROKE(2.2)),
@@ -57,20 +67,57 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const fmtToday = () => cap(fmtLongD.format(new Date()));
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 const plural = (n, one, many) => (n === 1 ? one : many);
-function datePillLabel(iso) {
-  const t = todayISO();
-  const y = new Date(); y.setDate(y.getDate() - 1);
-  const dm = clean(fmtDayMonth.format(parseISO(iso)));
-  if (iso === t) return 'Oggi, ' + dm;
-  if (iso === isoOf(y)) return 'Ieri, ' + dm;
-  return fmtShort(iso);
-}
 function defaultYear() {
   const d = new Date(); const y = d.getFullYear();
   return d.getMonth() >= 8 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
 }
 function defaultSemTitle() { const m = new Date().getMonth(); return (m >= 8 || m <= 1) ? '1° Semestre' : '2° Semestre'; }
 function shortYear(y) { const m = /^(\d{4})\s*\/\s*(\d{4})$/.exec(y || ''); return m ? `${m[1].slice(2)}/${m[2].slice(2)}` : (y || ''); }
+const DAY_MS = 864e5;
+function mondayOf(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+function addDays(d, n) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; }
+// Settimane da quella di `iso` a quella attuale, inclusa (1 = questa settimana).
+function weeksSince(iso) { return Math.round((mondayOf(new Date()) - mondayOf(parseISO(iso))) / (7 * DAY_MS)) + 1; }
+// Date (fino a oggi) delle ultime `weeks` settimane che cadono nei giorni di lezione.
+function pastDates(days, weeks) {
+  const start = addDays(mondayOf(new Date()), -7 * (weeks - 1));
+  const t = todayISO(), out = [];
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = addDays(start, i), iso = isoOf(d);
+    if (iso > t) break;
+    if (days.includes(d.getDay())) out.push(iso);
+  }
+  return out;
+}
+// Inizio lezioni presunto: ultimo lunedì di settembre (1° sem.) o primo lunedì di marzo (2° sem.).
+function guessStart(title, year) {
+  const m = /^(\d{4})\s*\/\s*(\d{4})$/.exec(year || '');
+  if (!m) return isoOf(mondayOf(new Date()));
+  if (/^2/.test(title)) { const d = new Date(+m[2], 2, 1); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); return isoOf(d); }
+  const d = new Date(+m[1], 8, 30); while (d.getDay() !== 1) d.setDate(d.getDate() - 1); return isoOf(d);
+}
+const semStart = (sem) => (sem && (sem.start || guessStart(sem.title, sem.year))) || todayISO();
+const clampWeeks = (n) => Math.max(1, Math.min(MAX_WEEKS, n));
+const daysLabel = (days) => (Array.isArray(days) && days.length ? days.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((d) => DAY_SHORT[d]).join(', ') : '');
+const DAY_TOKENS = { dom: 0, lun: 1, mar: 2, mer: 3, gio: 4, ven: 5, sab: 6 };
+// Converte il vecchio campo testo (es. "Lun–Gio", "lun, mer") in numeri di giorno.
+function parseDays(txt) {
+  const out = new Set();
+  String(txt || '').toLowerCase().split(/[,;/\s]+|\be\b/).forEach((part) => {
+    const r = part.split(/[–—-]/).map((p) => DAY_TOKENS[p.trim().slice(0, 3)]);
+    if (r.length === 2 && r[0] != null && r[1] != null) { for (let d = r[0]; ; d = (d + 1) % 7) { out.add(d); if (d === r[1]) break; } }
+    else if (r[0] != null) out.add(r[0]);
+  });
+  return [...out];
+}
+// Testo nero sui colori chiari (es. giallo), bianco sugli altri.
+function onTint(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#FFFFFF';
+  const n = parseInt(m[1], 16);
+  return (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) > 186 ? '#1C1C1E' : '#FFFFFF';
+}
+
 const STOP = /^(di|e|ed|del|della|dello|dei|degli|delle|la|il|lo|le|i|gli|a|al|in|per|con|da|ad)$/i;
 function autoCode(name) {
   const w = name.trim().split(/\s+/).filter((x) => x && !STOP.test(x) && /[A-Za-zÀ-ÿ]/.test(x));
@@ -89,7 +136,10 @@ function migrate(s) {
   const out = Object.assign(d, s);
   out.semesters = Array.isArray(out.semesters) ? out.semesters : [];
   out.courses = Array.isArray(out.courses) ? out.courses : [];
-  out.courses.forEach((c) => { c.lessons = Array.isArray(c.lessons) ? c.lessons : []; });
+  out.courses.forEach((c) => {
+    c.lessons = Array.isArray(c.lessons) ? c.lessons : [];
+    if (!Array.isArray(c.days)) c.days = parseDays(c.days);
+  });
   return out;
 }
 function load() {
@@ -148,7 +198,7 @@ function staleNotes() {
 
 /* ---------- Componenti ---------- */
 const codeIcon = (c, size, radius, font) =>
-  `<span class="code-icon" aria-hidden="true" style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${esc(c.tint)};font-size:${font}px">${esc(c.code || '?')}</span>`;
+  `<span class="code-icon" aria-hidden="true" style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${esc(c.tint)};color:${onTint(c.tint)};font-size:${font}px">${esc(c.code || '?')}</span>`;
 
 function segBar(L, h = 8) {
   if (!L.length) return `<div class="track" style="height:${h}px"></div>`;
@@ -181,7 +231,8 @@ function navBar(active, courseId) {
   </nav>`;
 }
 function semesterHead(sem) {
-  return `<header class="head"><h1 class="large-title">${esc(sem.title)}</h1><span class="sub">A.A. ${esc(sem.year)} · ${fmtToday()}</span></header>`;
+  const wk = sem.start && sem.start <= todayISO() ? weeksSince(sem.start) : 0;
+  return `<header class="head"><h1 class="large-title">${esc(sem.title)}</h1><span class="sub">A.A. ${esc(sem.year)}${wk ? ' · Settimana ' + wk : ''} · ${fmtToday()}</span></header>`;
 }
 function remindBanner() {
   const st = staleNotes();
@@ -215,7 +266,7 @@ function noCourses() {
 function courseCard(c) {
   const st = stats(c);
   const np = pct(st.upTo, st.total);
-  const meta = [c.cfu ? c.cfu + ' CFU' : '', c.prof].filter(Boolean).join(' · ') || 'Tocca per i dettagli';
+  const meta = [c.cfu ? c.cfu + ' CFU' : '', c.prof, daysLabel(c.days)].filter(Boolean).join(' · ') || 'Tocca per i dettagli';
   return `<article class="card course">
     <div class="course-head">
       ${codeIcon(c, 40, 11, 14)}
@@ -289,12 +340,12 @@ function lessonRow(l, n, c, ro) {
 function courseDetail(c, wide) {
   const st = stats(c);
   const f = ui.filter;
-  const meta = [c.cfu ? c.cfu + ' CFU' : '', c.prof, c.days].filter(Boolean).join(' · ');
+  const meta = [c.cfu ? c.cfu + ' CFU' : '', c.prof, daysLabel(c.days)].filter(Boolean).join(' · ');
   const numbered = st.L.map((l, i) => ({ l, n: i + 1 }));
   const rows = numbered.slice().reverse().filter(({ l }) => (f === 'miss' ? l.p === 'M' : f === 'notes' ? !l.a : true));
   const filters = [['all', wide ? 'Tutte le lezioni' : 'Tutte'], ['miss', 'Da recuperare'], ['notes', 'Appunti indietro']];
   let empty = '';
-  if (!st.total) empty = `<li class="list-empty"><b>Nessuna lezione</b><span>Tocca + per registrare la prima lezione.</span></li>`;
+  if (!st.total) empty = `<li class="list-empty"><b>Nessuna lezione</b><span>Registra la lezione di oggi con +, oppure aggiungi in un colpo quelle già fatte.</span></li>`;
   else if (!rows.length) empty = `<li class="list-empty"><b>Sei in pari</b><span>${f === 'miss' ? 'Nessuna lezione da recuperare.' : 'Tutti gli appunti sono sistemati.'}</span></li>`;
   return `
     <header class="chead">${codeIcon(c, 52, 14, 18)}<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><h1>${esc(c.name)}</h1>${meta ? `<span class="sub">${esc(meta)}</span>` : ''}</div></header>
@@ -313,6 +364,7 @@ function courseDetail(c, wide) {
     </div>
     ${wide ? '' : '<h2 class="sec-label">Lezioni · dalla più recente</h2>'}
     <div class="lessons ${wide ? '' : 'mx'}"><ol class="list">${rows.map(({ l, n }) => lessonRow(l, n, c)).join('')}${empty}</ol></div>
+    <button class="add-course past-btn ${wide ? '' : 'mx-btn'}" data-act="past" data-id="${c.id}">${I.cal(16)}Aggiungi lezioni passate</button>
     ${st.total ? `<p class="foot">Tocca lo stato per cambiarlo, tocca la lezione per modificarla. Scorri a destra per “Recuperata”, a sinistra per “Appunti sistemati”.</p>` : ''}`;
 }
 function phoneCourse(c) {
@@ -381,9 +433,9 @@ function archCourseBody(c, withBar) {
 function settingsBody() {
   const sem = curSem();
   const opts = [
-    { id: 'chiaro', label: 'Chiaro', l: ['#F2F2F7', '#000000', '#FFFFFF', '#007AFF', '#FF9500'] },
+    { id: 'chiaro', label: 'Chiaro', l: ['#F2F2F7', '#000000', '#FFFFFF', '#0088FF', '#FF8D28'] },
     { id: 'scuro', label: 'Scuro', l: ['#000000', '#FFFFFF', '#1C1C1E', '#0A84FF', '#FF9F0A'] },
-    { id: 'automatico', label: 'Automatico', l: ['#F2F2F7', '#000000', '#FFFFFF', '#007AFF', '#FF9500'], split: true }
+    { id: 'automatico', label: 'Automatico', l: ['#F2F2F7', '#000000', '#FFFFFF', '#0088FF', '#FF8D28'], split: true }
   ];
   const half = (p) => `<span style="background:${p[0]}"><i style="height:7px;width:70%;border-radius:3px;background:${p[1]}"></i><i style="height:34px;background:${p[2]};padding:5px;display:flex;flex-direction:column;gap:4px"><i style="height:4px;border-radius:2px;background:${p[3]}"></i><i style="height:4px;width:55%;border-radius:2px;background:${p[4]}"></i></i><i style="height:34px;background:${p[2]}"></i><i style="margin-top:auto;height:12px;border-radius:6px;background:${p[2]}"></i></span>`;
   const dark = ['#000000', '#FFFFFF', '#1C1C1E', '#0A84FF', '#FF9F0A'];
@@ -399,17 +451,17 @@ function settingsBody() {
 
     <h2 class="sec-label" id="semestre">Semestre</h2>
     <ul class="slist" aria-labelledby="semestre">
-      <li><button class="srow" data-act="${sem ? 'edit-sem' : 'new-sem'}"><span class="sicon" style="background:#007AFF">${I.cal()}</span><span class="sbody">Semestre attuale<span class="v">${sem ? esc((sem.title.match(/^\S+/) || [''])[0] + ' · ' + shortYear(sem.year)) : 'Nessuno'}${I.chev(14, 2.8)}</span></span></button></li>
-      <li><div class="srow"><span class="sicon" style="background:#FF3B30">${I.bell()}</span><span class="sbody"><label for="promemoria">Promemoria appunti</label><button id="promemoria" class="switch" role="switch" aria-checked="${!!S.remind}" data-act="toggle-remind"><span></span></button></span></div></li>
+      <li><button class="srow" data-act="${sem ? 'edit-sem' : 'new-sem'}"><span class="sicon" style="background:#0088FF">${I.cal()}</span><span class="sbody">Semestre attuale<span class="v">${sem ? esc((sem.title.match(/^\S+/) || [''])[0] + ' · ' + shortYear(sem.year)) : 'Nessuno'}${I.chev(14, 2.8)}</span></span></button></li>
+      <li><div class="srow"><span class="sicon" style="background:#FF383C">${I.bell()}</span><span class="sbody"><label for="promemoria">Promemoria appunti</label><button id="promemoria" class="switch" role="switch" aria-checked="${!!S.remind}" data-act="toggle-remind"><span></span></button></span></div></li>
       ${S.remind ? `<li><div class="srow"><span class="sicon" style="background:#8E8E93">${I.clock()}</span><span class="sbody"><label for="rdays">Avvisa dopo</label><select id="rdays" class="sselect" data-field="remindDays">${[1, 2, 3, 5, 7, 14].map((d) => `<option value="${d}" ${S.remindDays === d ? 'selected' : ''}>${d} ${plural(d, 'giorno', 'giorni')}</option>`).join('')}</select></span></div></li>` : ''}
-      ${sem && curCourses().length ? `<li><button class="srow" data-act="conclude"><span class="sicon" style="background:#FF9500">${I.box()}</span><span class="sbody">Concludi semestre<span class="v">${I.chev(14, 2.8)}</span></span></button></li>` : ''}
+      ${sem && curCourses().length ? `<li><button class="srow" data-act="conclude"><span class="sicon" style="background:#FF8D28">${I.box()}</span><span class="sbody">Concludi semestre<span class="v">${I.chev(14, 2.8)}</span></span></button></li>` : ''}
     </ul>
     <p class="foot">Il promemoria mostra un avviso nella Home quando hai appunti non sistemati da più giorni.</p>
 
     <h2 class="sec-label" id="dati">Dati</h2>
     <ul class="slist" aria-labelledby="dati">
       <li><button class="srow" data-act="export"><span class="sicon" style="background:#34C759">${I.share()}</span><span class="sbody">Esporta backup<span class="v">${I.chev(14, 2.8)}</span></span></button></li>
-      <li><button class="srow" data-act="import"><span class="sicon" style="background:#5856D6">${I.download()}</span><span class="sbody">Importa backup<span class="v">${I.chev(14, 2.8)}</span></span></button></li>
+      <li><button class="srow" data-act="import"><span class="sicon" style="background:#6155F5">${I.download()}</span><span class="sbody">Importa backup<span class="v">${I.chev(14, 2.8)}</span></span></button></li>
       <li><button class="srow" data-act="wipe"><span class="sicon" style="background:#8E8E93">${I.trash()}</span><span class="sbody danger">Cancella tutti i dati</span></button></li>
     </ul>
     <p class="foot">Il backup è un file .json: salvalo in File o iCloud Drive per recuperare i dati se cambi dispositivo.</p>
@@ -454,7 +506,7 @@ function viewWide(r) {
   let body;
   if (onSemester) {
     if (courses.length) {
-      top += `<div class="gseg glass"><button data-act="conclude">Concludi semestre</button><i></i><button data-act="edit-course" data-id="${selId}">Modifica corso</button></div>
+      top += `<div class="gseg glass"><button data-act="conclude">Concludi semestre</button><i></i><button data-act="past" data-id="${selId}">Lezioni passate</button><i></i><button data-act="edit-course" data-id="${selId}">Modifica corso</button></div>
         <button class="blue-pill" data-act="new-lesson" data-id="${selId}">${I.plus(18)}Lezione</button>`;
     } else if (!open) {
       top += `<a class="glass gbtn circle" href="#/impostazioni" aria-label="Impostazioni">${I.person()}</a>`;
@@ -511,12 +563,43 @@ function sheetLesson(s) {
   return `${sheetHead(isNew ? 'Nuova lezione' : 'Modifica lezione', 'save-lesson', !c)}
     ${isNew ? `<div class="chips" role="radiogroup" aria-label="Corso">${courses.map((x) => `<button class="chip ${x.id === s.courseId ? 'on' : ''}" role="radio" aria-checked="${x.id === s.courseId}" data-act="sfield" data-field="courseId" data-value="${x.id}">${codeIcon(x, 28, 14, 11)}${esc(x.name)}</button>`).join('')}</div>` : ''}
     <div class="group">
-      <div class="grow"><span>Lezione ${n}</span><label class="date-pill"><span>${datePillLabel(s.date)}</span><input type="date" data-field="date" value="${s.date}" max="2100-12-31" aria-label="Data della lezione"></label></div>
+      <div class="grow"><span>Lezione ${n}</span><input class="date-in" type="date" data-field="date" value="${s.date}" max="${todayISO()}" aria-label="Data della lezione"></div>
       <div class="grow"><input type="text" data-field="topic" placeholder="Argomento (opzionale)" aria-label="Argomento (opzionale)" value="${esc(s.topic)}" enterkeyhint="done" autocomplete="off"></div>
     </div>
     <div class="fgroup"><span class="field-label">L'hai seguita?</span>${sseg('p', pres, s.p)}</div>
     <div class="fgroup"><span class="field-label">Appunti</span>${sseg('a', [['0', 'Da sistemare', 'plain'], ['1', isNew ? 'Già sistemati' : 'Sistemati', 'mint']], s.a ? '1' : '0')}</div>
-    ${isNew ? '' : '<button class="danger-btn" data-act="delete-lesson">Elimina lezione</button>'}`;
+    ${isNew ? `<button class="link-btn" data-act="past" data-id="${s.courseId}">${I.cal(16)}Devi segnare più lezioni già fatte? Aggiungile in un colpo</button>` : '<button class="danger-btn" data-act="delete-lesson">Elimina lezione</button>'}`;
+}
+function dayPicker(days) {
+  return `<div class="days" role="group" aria-label="Giorni di lezione">${WEEKDAYS.map((d) => `<button class="day ${days.includes(d) ? 'on' : ''}" aria-pressed="${days.includes(d)}" aria-label="${DAY_LONG[d]}" data-act="toggle-day" data-value="${d}">${DAY_LETTER[d]}</button>`).join('')}</div>`;
+}
+function sheetPast(s) {
+  const c = courseById(s.courseId);
+  const dates = s.days.length ? pastDates(s.days, s.weeks) : [];
+  const have = new Set(c.lessons.map((l) => l.date));
+  const add = dates.filter((d) => !have.has(d));
+  const from = isoOf(addDays(mondayOf(new Date()), -7 * (s.weeks - 1)));
+  const start = semStart(semById(c.semId));
+  const sinceStart = start <= todayISO() ? clampWeeks(weeksSince(start)) : 0;
+  let sum;
+  if (!s.days.length) sum = 'Scegli i giorni in cui hai lezione.';
+  else if (!add.length) sum = 'Nessuna lezione nuova in questo periodo.';
+  else sum = `<b>${add.length} ${plural(add.length, 'lezione da aggiungere', 'lezioni da aggiungere')}</b>`;
+  if (dates.length > add.length) sum += ` · ${dates.length - add.length} già ${plural(dates.length - add.length, 'registrata', 'registrate')}`;
+  return `${sheetHead('Lezioni passate', 'save-past', !add.length, 'Aggiungi')}
+    <div class="past-course">${codeIcon(c, 40, 11, 14)}<div><b>${esc(c.name)}</b><span>Segna in un colpo le lezioni già svolte</span></div></div>
+    <div class="fgroup"><span class="field-label">Giorni di lezione</span>${dayPicker(s.days)}</div>
+    <div class="fgroup"><span class="field-label">Settimane già trascorse</span>
+      <div class="group">
+        <div class="grow"><span class="step-label"><b>${s.weeks} ${plural(s.weeks, 'settimana', 'settimane')}</b><small>dal ${fmtShort(from)} a oggi</small></span>
+          <span class="stepper"><button data-act="weeks" data-value="-1" aria-label="Una settimana in meno" ${s.weeks <= 1 ? 'disabled' : ''}>−</button><i></i><button data-act="weeks" data-value="1" aria-label="Una settimana in più" ${s.weeks >= MAX_WEEKS ? 'disabled' : ''}>+</button></span></div>
+        ${sinceStart && sinceStart !== s.weeks ? `<button class="grow link-row" data-act="weeks-set" data-value="${sinceStart}">Dall'inizio del semestre (${fmtShort(start)}) · ${sinceStart} ${plural(sinceStart, 'settimana', 'settimane')}</button>` : ''}
+      </div>
+    </div>
+    <p class="past-sum">${sum}</p>
+    <div class="fgroup"><span class="field-label">Le hai seguite?</span>${sseg('p', [['S', 'Sì, tutte', 'blue', I.check(14)], ['M', 'Da recuperare', 'orange', I.warn(13)]], s.p)}</div>
+    <div class="fgroup"><span class="field-label">Appunti</span>${sseg('a', [['0', 'Da sistemare', 'plain'], ['1', 'Già sistemati', 'mint']], s.a ? '1' : '0')}</div>
+    <p class="sheet-note">Le date che hai già registrato non vengono duplicate. Dopo puoi correggere ogni lezione dalla lista: tocca lo stato o scorri la riga.</p>`;
 }
 function sheetCourse(s) {
   const ok = s.name.trim().length > 0;
@@ -528,10 +611,12 @@ function sheetCourse(s) {
       <div class="grow"><label for="f-code">Sigla</label><input id="f-code" class="right" type="text" data-field="code" maxlength="3" placeholder="${esc(autoCode(s.name) || 'AM')}" value="${esc(s.code)}" autocomplete="off" autocapitalize="characters"></div>
       <div class="grow"><label for="f-prof">Docente</label><input id="f-prof" class="right" type="text" data-field="prof" placeholder="Prof. Rossi" value="${esc(s.prof)}" autocomplete="off"></div>
       <div class="grow"><label for="f-cfu">CFU</label><input id="f-cfu" class="right" type="text" inputmode="numeric" pattern="[0-9]*" data-field="cfu" placeholder="9" value="${esc(s.cfu)}" autocomplete="off"></div>
-      <div class="grow"><label for="f-days">Giorni</label><input id="f-days" class="right" type="text" data-field="days" placeholder="Lun–Gio" value="${esc(s.days)}" autocomplete="off"></div>
     </div>
+    <div class="fgroup"><span class="field-label">Giorni di lezione</span>${dayPicker(s.days)}</div>
     <div class="fgroup"><span class="field-label">Colore</span>
-      <div class="swatches" role="radiogroup" aria-label="Colore">${TINTS.map((t) => `<button class="swatch ${s.tint === t ? 'on' : ''}" style="background:${t}" role="radio" aria-checked="${s.tint === t}" aria-label="Colore ${t}" data-act="sfield" data-field="tint" data-value="${t}">${s.tint === t ? I.check(16, 3) : ''}</button>`).join('')}</div>
+      <div class="swatches" role="radiogroup" aria-label="Colore">${TINTS.map((t) => `<button class="swatch ${s.tint === t ? 'on' : ''}" style="background:${t};color:${onTint(t)}" role="radio" aria-checked="${s.tint === t}" aria-label="Colore ${t}" data-act="sfield" data-field="tint" data-value="${t}">${s.tint === t ? I.check(16, 3) : ''}</button>`).join('')}
+        <label class="swatch custom ${TINTS.includes(s.tint) ? '' : 'on'}" style="${TINTS.includes(s.tint) ? '' : `background:${esc(s.tint)};color:${onTint(s.tint)}`}" aria-label="Altro colore">${TINTS.includes(s.tint) ? I.plus(18, 2.6) : I.check(16, 3)}<input type="color" data-field="tint" value="${esc(s.tint)}"></label>
+      </div>
     </div>
     ${s.mode === 'edit' ? '<button class="danger-btn" data-act="delete-course">Elimina corso</button>' : ''}`;
 }
@@ -543,7 +628,9 @@ function sheetSemester(s) {
     <div class="group">
       <div class="grow"><label for="f-st">Nome</label><input id="f-st" class="right" type="text" data-field="title" value="${esc(s.title)}" placeholder="1° Semestre" autocomplete="off"></div>
       <div class="grow"><label for="f-sy">Anno accademico</label><input id="f-sy" class="right" type="text" data-field="year" value="${esc(s.year)}" placeholder="2026/2027" inputmode="numeric" autocomplete="off"></div>
+      <div class="grow"><label for="f-ss">Inizio lezioni</label><input id="f-ss" class="date-in" type="date" data-field="start" value="${esc(s.start)}"></div>
     </div>
+    <p class="sheet-note">L'inizio lezioni serve a contare le settimane e a proporti le lezioni già trascorse quando aggiungi un corso.</p>
     ${s.mode === 'new' && !S.semesters.length ? '<p class="sheet-note">Dopo potrai aggiungere i corsi. Quando il semestre finisce, concludilo dalla Home: i corsi passano in Archivio.</p>' : ''}`;
 }
 function sheetConclude() {
@@ -568,7 +655,7 @@ function renderSheet() {
   if (!s) { root.innerHTML = ''; return; }
   const prev = root.querySelector('.sheet');
   const scroll = prev ? prev.scrollTop : 0;
-  const html = { lesson: sheetLesson, course: sheetCourse, semester: sheetSemester, conclude: sheetConclude }[s.type](s);
+  const html = { lesson: sheetLesson, course: sheetCourse, semester: sheetSemester, conclude: sheetConclude, past: sheetPast }[s.type](s);
   const full = s.type === 'conclude' && !wideMQ.matches;
   root.innerHTML = `<div class="backdrop" data-act="close-sheet"></div><section class="sheet ${full ? 'full' : ''} ${ui.sheetNew ? 'anim' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title">${html}</section>`;
   root.querySelector('.sheet').scrollTop = scroll;
@@ -651,7 +738,9 @@ function newLesson(courseId) {
   const courses = curCourses();
   if (!courses.length) return;
   const r = route();
-  const cid = courseId || (r.name === 'corso' ? r.id : null) || (wideMQ.matches ? ui.sel : null) || courses[0].id;
+  const today = new Date().getDay();
+  const scheduled = courses.find((c) => (c.days || []).includes(today));
+  const cid = courseId || (r.name === 'corso' ? r.id : null) || (scheduled && scheduled.id) || (wideMQ.matches ? ui.sel : null) || courses[0].id;
   openSheet({ type: 'lesson', mode: 'new', courseId: cid, date: todayISO(), topic: '', p: 'S', a: false });
 }
 function editLesson(cid, lid) {
@@ -662,6 +751,29 @@ function editLesson(cid, lid) {
 function nextTint() {
   const used = curCourses().map((c) => c.tint);
   return TINTS.find((t) => !used.includes(t)) || TINTS[curCourses().length % TINTS.length];
+}
+function openPast(courseId) {
+  const c = courseById(courseId);
+  if (!c) return;
+  const start = semStart(semById(c.semId));
+  const weeks = start <= todayISO() ? clampWeeks(weeksSince(start)) : 1;
+  openSheet({ type: 'past', courseId, days: (c.days || []).slice(), weeks, p: 'S', a: false });
+}
+function savePast() {
+  const s = ui.sheet;
+  const c = courseById(s.courseId);
+  if (!c) return;
+  const have = new Set(c.lessons.map((l) => l.date));
+  const add = pastDates(s.days, s.weeks).filter((d) => !have.has(d));
+  if (!add.length) return;
+  const t = Date.now();
+  commit(() => {
+    c.days = s.days.slice();
+    add.forEach((date, i) => c.lessons.push({ id: uid(), date, topic: '', p: s.p, a: s.a, t: t + i }));
+    ui.sheet = null;
+  });
+  if (route().name !== 'corso' || route().id !== c.id) { ui.sel = c.id; location.hash = '#/corso/' + c.id; }
+  toast(`${add.length} ${plural(add.length, 'lezione aggiunta', 'lezioni aggiunte')} · ${c.code || c.name}`);
 }
 function saveLesson() {
   const s = ui.sheet;
@@ -683,20 +795,27 @@ function saveCourse() {
   const s = ui.sheet;
   const name = s.name.trim();
   if (!name) return;
-  const data = { name, code: (s.code.trim() || autoCode(name) || name.slice(0, 2)).toUpperCase().slice(0, 3), tint: s.tint, prof: s.prof.trim(), cfu: parseInt(s.cfu, 10) || '', days: s.days.trim() };
+  const data = { name, code: (s.code.trim() || autoCode(name) || name.slice(0, 2)).toUpperCase().slice(0, 3), tint: s.tint, prof: s.prof.trim(), cfu: parseInt(s.cfu, 10) || '', days: s.days.slice() };
   let id = s.id;
   commit(() => {
     if (s.mode === 'new') { id = uid(); S.courses.push(Object.assign({ id, semId: curSem().id, lessons: [], createdAt: Date.now() }, data)); }
     else Object.assign(courseById(id), data);
     ui.sheet = null;
   });
-  if (s.mode === 'new') { ui.sel = id; if (wideMQ.matches) location.hash = '#/corso/' + id; toast('Corso aggiunto'); }
+  if (s.mode !== 'new') return;
+  ui.sel = id;
+  if (wideMQ.matches) location.hash = '#/corso/' + id;
+  // Semestre già iniziato e giorni indicati: propone subito di segnare le lezioni passate.
+  const start = semStart(curSem());
+  if (data.days.length && start <= todayISO() && pastDates(data.days, clampWeeks(weeksSince(start))).length) openPast(id);
+  else toast('Corso aggiunto');
 }
 function saveSemester() {
   const s = ui.sheet;
   commit(() => {
-    if (s.mode === 'new') S.semesters.push({ id: uid(), title: s.title.trim(), year: s.year.trim(), status: 'current', createdAt: Date.now() });
-    else Object.assign(curSem(), { title: s.title.trim(), year: s.year.trim() });
+    const data = { title: s.title.trim(), year: s.year.trim(), start: s.start || guessStart(s.title, s.year) };
+    if (s.mode === 'new') S.semesters.push(Object.assign({ id: uid(), status: 'current', createdAt: Date.now() }, data));
+    else Object.assign(curSem(), data);
     ui.sheet = null;
   });
 }
@@ -767,10 +886,10 @@ function importData(file) {
 }
 
 const ACT = {
-  'new-sem': () => openSheet({ type: 'semester', mode: 'new', title: defaultSemTitle(), year: defaultYear() }),
-  'edit-sem': () => { const s = curSem(); openSheet({ type: 'semester', mode: 'edit', title: s.title, year: s.year }); },
-  'new-course': () => openSheet({ type: 'course', mode: 'new', name: '', code: '', prof: '', cfu: '', days: '', tint: nextTint() }),
-  'edit-course': (d) => { const c = courseById(d.id); if (c) openSheet({ type: 'course', mode: 'edit', id: c.id, name: c.name, code: c.code || '', prof: c.prof || '', cfu: c.cfu ? String(c.cfu) : '', days: c.days || '', tint: c.tint }); },
+  'new-sem': () => { const t = defaultSemTitle(), y = defaultYear(); openSheet({ type: 'semester', mode: 'new', title: t, year: y, start: guessStart(t, y) }); },
+  'edit-sem': () => { const s = curSem(); openSheet({ type: 'semester', mode: 'edit', title: s.title, year: s.year, start: semStart(s), startTouched: !!s.start }); },
+  'new-course': () => openSheet({ type: 'course', mode: 'new', name: '', code: '', prof: '', cfu: '', days: [], tint: nextTint() }),
+  'edit-course': (d) => { const c = courseById(d.id); if (c) openSheet({ type: 'course', mode: 'edit', id: c.id, name: c.name, code: c.code || '', prof: c.prof || '', cfu: c.cfu ? String(c.cfu) : '', days: (c.days || []).slice(), tint: c.tint }); },
   'new-lesson': (d) => newLesson(d.id),
   'edit-lesson': (d) => editLesson(d.course, d.id),
   'conclude': () => { if (curCourses().length) openSheet({ type: 'conclude' }); },
@@ -779,6 +898,11 @@ const ACT = {
   'save-lesson': saveLesson,
   'save-course': saveCourse,
   'save-sem': saveSemester,
+  'past': (d) => openPast(d.id || (ui.sheet && ui.sheet.courseId)),
+  'save-past': savePast,
+  'toggle-day': (d) => { const s = ui.sheet, v = +d.value; s.days = s.days.includes(v) ? s.days.filter((x) => x !== v) : s.days.concat(v); renderSheet(); },
+  'weeks': (d) => { ui.sheet.weeks = clampWeeks(ui.sheet.weeks + (+d.value)); renderSheet(); },
+  'weeks-set': (d) => { ui.sheet.weeks = clampWeeks(+d.value); renderSheet(); },
   'delete-lesson': () => {
     const s = ui.sheet;
     if (!confirm('Eliminare questa lezione?')) return;
@@ -788,6 +912,7 @@ const ACT = {
   'sfield': (d) => {
     const s = ui.sheet;
     if (d.field === 'a') s.a = d.value === '1'; else s[d.field] = d.value;
+    if (s.type === 'semester' && d.field === 'title' && !s.startTouched) s.start = guessStart(s.title, s.year);
     renderSheet();
   },
   'cycle': (d) => commit(() => { const l = findLesson(d.course, d.id); if (l) l.p = { S: 'M', M: 'R', R: 'S' }[l.p]; }),
@@ -839,6 +964,8 @@ document.addEventListener('change', (e) => {
   const f = t.dataset && t.dataset.field;
   if (f === 'remindDays') { commit(() => { S.remindDays = parseInt(t.value, 10) || 3; }); return; }
   if (f === 'date' && ui.sheet) { if (t.value) ui.sheet.date = t.value; renderSheet(); }
+  if (f === 'start' && ui.sheet) { if (t.value) { ui.sheet.start = t.value; ui.sheet.startTouched = true; } renderSheet(); }
+  if (f === 'tint' && ui.sheet) { ui.sheet.tint = t.value.toUpperCase(); renderSheet(); }
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && ui.sheet) closeSheet();
