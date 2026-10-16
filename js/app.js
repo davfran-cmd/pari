@@ -57,6 +57,7 @@ const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(3
 const pad = (n) => String(n).padStart(2, '0');
 const isoOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const todayISO = () => isoOf(new Date());
+const yesterdayISO = () => { const d = new Date(); d.setDate(d.getDate() - 1); return isoOf(d); };
 const parseISO = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 const fmtShortD = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
 const fmtDayMonth = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
@@ -128,7 +129,7 @@ function autoCode(name) {
 
 /* ---------- Stato persistente ---------- */
 function defaultState() {
-  return { v: 1, theme: 'automatico', remind: true, remindDays: 3, semesters: [], courses: [] };
+  return { v: 1, theme: 'automatico', remind: true, remindDays: 3, auto: true, autoP: 'S', semesters: [], courses: [] };
 }
 function migrate(s) {
   const d = defaultState();
@@ -139,6 +140,7 @@ function migrate(s) {
   out.courses.forEach((c) => {
     c.lessons = Array.isArray(c.lessons) ? c.lessons : [];
     if (!Array.isArray(c.days)) c.days = parseDays(c.days);
+    if (!c.autoUntil) c.autoUntil = yesterdayISO();
   });
   return out;
 }
@@ -194,6 +196,36 @@ function staleNotes() {
   const out = [];
   curCourses().forEach((c) => c.lessons.forEach((l) => { if (!l.a && l.date <= limIso) out.push({ c, l }); }));
   return out;
+}
+
+/* Aggiunge da sola le lezioni dei giorni in calendario, dall'ultimo controllo (autoUntil) a oggi.
+   Le lezioni eliminate non tornano perché autoUntil va solo avanti. */
+function autoSync() {
+  const t = todayISO();
+  let added = 0;
+  curCourses().forEach((c) => {
+    const days = Array.isArray(c.days) ? c.days : [];
+    if (S.auto !== false && days.length) {
+      const have = new Set(c.lessons.map((l) => l.date));
+      let d = c.autoUntil ? addDays(parseISO(c.autoUntil), 1) : parseISO(t);
+      for (let i = 0; isoOf(d) <= t && i < 400; i++, d = addDays(d, 1)) {
+        const iso = isoOf(d);
+        if (days.includes(d.getDay()) && !have.has(iso)) {
+          c.lessons.push({ id: uid(), date: iso, topic: '', p: S.autoP === 'M' ? 'M' : 'S', a: false, t: Date.now() + added, auto: true });
+          added++;
+        }
+      }
+    }
+    c.autoUntil = t;
+  });
+  if (added) save();
+  return added;
+}
+function runAutoSync() {
+  const n = autoSync();
+  if (!n) return;
+  render();
+  toast(`${n} ${plural(n, 'nuova lezione aggiunta', 'nuove lezioni aggiunte')} dal calendario`);
 }
 
 /* ---------- Componenti ---------- */
@@ -345,7 +377,7 @@ function courseDetail(c, wide) {
   const rows = numbered.slice().reverse().filter(({ l }) => (f === 'miss' ? l.p === 'M' : f === 'notes' ? !l.a : true));
   const filters = [['all', wide ? 'Tutte le lezioni' : 'Tutte'], ['miss', 'Da recuperare'], ['notes', 'Appunti indietro']];
   let empty = '';
-  if (!st.total) empty = `<li class="list-empty"><b>Nessuna lezione</b><span>Registra la lezione di oggi con +, oppure aggiungi in un colpo quelle già fatte.</span></li>`;
+  if (!st.total) empty = `<li class="list-empty"><b>Nessuna lezione</b><span>${(c.days || []).length ? 'Le lezioni dei giorni in calendario si aggiungeranno da sole. Per quelle già fatte usa il tasto qui sotto.' : 'Imposta i giorni di lezione da Modifica: Pari aggiungerà da solo le lezioni di quei giorni.'}</span></li>`;
   else if (!rows.length) empty = `<li class="list-empty"><b>Sei in pari</b><span>${f === 'miss' ? 'Nessuna lezione da recuperare.' : 'Tutti gli appunti sono sistemati.'}</span></li>`;
   return `
     <header class="chead">${codeIcon(c, 52, 14, 18)}<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><h1>${esc(c.name)}</h1>${meta ? `<span class="sub">${esc(meta)}</span>` : ''}</div></header>
@@ -452,11 +484,13 @@ function settingsBody() {
     <h2 class="sec-label" id="semestre">Semestre</h2>
     <ul class="slist" aria-labelledby="semestre">
       <li><button class="srow" data-act="${sem ? 'edit-sem' : 'new-sem'}"><span class="sicon" style="background:#0088FF">${I.cal()}</span><span class="sbody">Semestre attuale<span class="v">${sem ? esc((sem.title.match(/^\S+/) || [''])[0] + ' · ' + shortYear(sem.year)) : 'Nessuno'}${I.chev(14, 2.8)}</span></span></button></li>
+      <li><div class="srow"><span class="sicon" style="background:#34C759">${I.cal()}</span><span class="sbody"><label for="auto">Lezioni automatiche</label><button id="auto" class="switch" role="switch" aria-checked="${S.auto !== false}" data-act="toggle-auto"><span></span></button></span></div></li>
+      ${S.auto !== false ? `<li><div class="srow"><span class="sicon" style="background:#8E8E93">${I.check(16, 2.6)}</span><span class="sbody"><label for="autop">Segna come</label><select id="autop" class="sselect" data-field="autoP"><option value="S" ${S.autoP !== 'M' ? 'selected' : ''}>Presente</option><option value="M" ${S.autoP === 'M' ? 'selected' : ''}>Da recuperare</option></select></span></div></li>` : ''}
       <li><div class="srow"><span class="sicon" style="background:#FF383C">${I.bell()}</span><span class="sbody"><label for="promemoria">Promemoria appunti</label><button id="promemoria" class="switch" role="switch" aria-checked="${!!S.remind}" data-act="toggle-remind"><span></span></button></span></div></li>
       ${S.remind ? `<li><div class="srow"><span class="sicon" style="background:#8E8E93">${I.clock()}</span><span class="sbody"><label for="rdays">Avvisa dopo</label><select id="rdays" class="sselect" data-field="remindDays">${[1, 2, 3, 5, 7, 14].map((d) => `<option value="${d}" ${S.remindDays === d ? 'selected' : ''}>${d} ${plural(d, 'giorno', 'giorni')}</option>`).join('')}</select></span></div></li>` : ''}
       ${sem && curCourses().length ? `<li><button class="srow" data-act="conclude"><span class="sicon" style="background:#FF8D28">${I.box()}</span><span class="sbody">Concludi semestre<span class="v">${I.chev(14, 2.8)}</span></span></button></li>` : ''}
     </ul>
-    <p class="foot">Il promemoria mostra un avviso nella Home quando hai appunti non sistemati da più giorni.</p>
+    <p class="foot">Con le lezioni automatiche, ogni giorno di lezione del corso compare da solo nella lista: se l'hai saltata tocca lo stato. Se elimini una lezione (es. vacanza) non viene ricreata. Il promemoria mostra un avviso nella Home quando hai appunti non sistemati da più giorni.</p>
 
     <h2 class="sec-label" id="dati">Dati</h2>
     <ul class="slist" aria-labelledby="dati">
@@ -798,7 +832,7 @@ function saveCourse() {
   const data = { name, code: (s.code.trim() || autoCode(name) || name.slice(0, 2)).toUpperCase().slice(0, 3), tint: s.tint, prof: s.prof.trim(), cfu: parseInt(s.cfu, 10) || '', days: s.days.slice() };
   let id = s.id;
   commit(() => {
-    if (s.mode === 'new') { id = uid(); S.courses.push(Object.assign({ id, semId: curSem().id, lessons: [], createdAt: Date.now() }, data)); }
+    if (s.mode === 'new') { id = uid(); S.courses.push(Object.assign({ id, semId: curSem().id, lessons: [], createdAt: Date.now(), autoUntil: yesterdayISO() }, data)); }
     else Object.assign(courseById(id), data);
     ui.sheet = null;
   });
@@ -843,7 +877,7 @@ function restoreCourse(id) {
   const c = courseById(id);
   if (!sem || !c) { alert('Crea prima un semestre attuale dalle Impostazioni.'); return; }
   if (!confirm(`Ripristinare “${c.name}” nel ${sem.title}?`)) return;
-  commit(() => { c.semId = sem.id; });
+  commit(() => { c.semId = sem.id; c.autoUntil = todayISO(); });
   location.hash = '#/corso/' + id;
   toast('Corso ripristinato');
 }
@@ -924,6 +958,7 @@ const ACT = {
   'restore': (d) => restoreCourse(d.id),
   'theme': (d) => commit(() => { S.theme = d.id; }),
   'toggle-remind': () => commit(() => { S.remind = !S.remind; }),
+  'toggle-auto': () => { commit(() => { S.auto = S.auto === false; curCourses().forEach((c) => { c.autoUntil = todayISO(); }); }); },
   'toggle-side': () => { ui.side = !sideOpen(); render(); },
   'export': exportData,
   'import': () => { const inp = $('#import-file'); inp.value = ''; inp.click(); },
@@ -962,6 +997,7 @@ document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.id === 'import-file') { if (t.files && t.files[0]) importData(t.files[0]); return; }
   const f = t.dataset && t.dataset.field;
+  if (f === 'autoP') { commit(() => { S.autoP = t.value; }); return; }
   if (f === 'remindDays') { commit(() => { S.remindDays = parseInt(t.value, 10) || 3; }); return; }
   if (f === 'date' && ui.sheet) { if (t.value) ui.sheet.date = t.value; renderSheet(); }
   if (f === 'start' && ui.sheet) { if (t.value) { ui.sheet.start = t.value; ui.sheet.startTouched = true; } renderSheet(); }
@@ -1017,6 +1053,9 @@ document.addEventListener('touchcancel', endSwipe);
 
 /* ---------- Avvio ---------- */
 render();
+runAutoSync();
+// Quando riapri l'app dal multitasking (anche giorni dopo) controlla di nuovo il calendario.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') runAutoSync(); });
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 // In sviluppo (localhost) niente cache offline, così le modifiche si vedono subito.
 const isDev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
