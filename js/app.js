@@ -150,15 +150,25 @@ function migrate(s) {
   out.exams = Array.isArray(out.exams) ? out.exams.filter((e) => e && e.id) : [];
   return out;
 }
+// App Android: i dati stanno in un file scritto subito (vedi MainActivity); localStorage resta come copia.
+const NATIVE = window.PariAndroid && window.PariAndroid.saveState ? window.PariAndroid : null;
 function load() {
-  try { const raw = localStorage.getItem(KEY); if (raw) return migrate(JSON.parse(raw)); } catch (e) { /* stato corrotto: riparte vuoto */ }
+  try {
+    // Al primo avvio della versione col file, i dati arrivano dal localStorage e passano nel file.
+    const raw = (NATIVE && NATIVE.loadState()) || localStorage.getItem(KEY);
+    if (raw) return migrate(JSON.parse(raw));
+  } catch (e) { /* stato corrotto: riparte vuoto */ }
   return defaultState();
 }
 let S = load();
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(S)); }
-  catch (e) { toast('Impossibile salvare i dati', true); }
+  const json = JSON.stringify(S);
+  let ok = true;
+  if (NATIVE) ok = NATIVE.saveState(json);
+  try { localStorage.setItem(KEY, json); } catch (e) { if (!NATIVE) ok = false; }
+  if (!ok) toast('Impossibile salvare i dati', true);
 }
+if (NATIVE && !NATIVE.loadState() && localStorage.getItem(KEY)) save();
 function commit(fn) { fn(); save(); render(); }
 
 /* Stato UI (non salvato) */
@@ -969,6 +979,8 @@ function applyTheme() {
 function render() {
   applyTheme();
   const r = route();
+  const same = renderedHash === location.hash, y = window.scrollY, keep = same ? anchor : null;
+  renderedHash = location.hash; anchor = null;
   const scrolls = {};
   app.querySelectorAll('[data-scroll]').forEach((el) => { scrolls[el.dataset.scroll] = el.scrollTop; });
   if (r.name === 'corso') {
@@ -985,7 +997,28 @@ function render() {
   else if (r.name === 'lib') app.innerHTML = phoneLibretto();
   else app.innerHTML = phoneHome();
   app.querySelectorAll('[data-scroll]').forEach((el) => { if (scrolls[el.dataset.scroll]) el.scrollTop = scrolls[el.dataset.scroll]; });
+  if (same && !wideMQ.matches) restorePlace(keep, y);
   renderSheet();
+}
+/* Dopo un tocco la pagina viene ridisegnata da capo: senza questo Safari su iPhone torna in cima e,
+   se sopra compare qualcosa (es. il riquadro "da recuperare"), la riga toccata scivola via.
+   Si ricorda dove stava l'elemento toccato e lo rimette nello stesso punto dello schermo. */
+let anchor = null, renderedHash = null;
+function keepPlace(el) {
+  const a = el && el.closest('[data-id]');
+  // Selettore dello stesso elemento (riga o pulsante) nella pagina ridisegnata.
+  const sel = a && `${a.tagName.toLowerCase()}${a.dataset.act ? `[data-act="${a.dataset.act}"]` : ''}[data-id="${CSS.escape(a.dataset.id)}"]`;
+  anchor = a ? { sel, top: a.getBoundingClientRect().top } : null;
+}
+function restorePlace(a, y) {
+  const fix = () => {
+    const el = a && app.querySelector(a.sel);
+    const target = el ? el.getBoundingClientRect().top + window.scrollY - a.top : y;
+    if (Math.abs(window.scrollY - target) > 1) window.scrollTo(0, target);
+  };
+  window.scrollTo(0, y);
+  fix();
+  requestAnimationFrame(fix);
 }
 let lastRoute = location.hash;
 window.addEventListener('hashchange', () => {
@@ -1294,6 +1327,8 @@ document.addEventListener('click', (e) => {
   if (Date.now() - suppressClick < 400) { e.preventDefault(); return; }
   if (el.disabled) return;
   const fn = ACT[el.dataset.act];
+  // I tocchi nei fogli lasciano come riferimento la riga che li ha aperti.
+  if (fn && !el.closest('#sheet-root')) keepPlace(el);
   if (fn) { e.preventDefault(); fn(el.dataset); }
 });
 document.addEventListener('input', (e) => {
@@ -1318,7 +1353,7 @@ document.addEventListener('change', (e) => {
   const f = t.dataset && t.dataset.field;
   if (f === 'autoP') { commit(() => { S.autoP = t.value; }); return; }
   if (f === 'remindDays') { commit(() => { S.remindDays = parseInt(t.value, 10) || 3; }); return; }
-  if (f === 'sim') { commit(() => { const e = examById(t.dataset.id); if (e) e.sim = parseInt(t.value, 10) || null; }); return; }
+  if (f === 'sim') { keepPlace(t); commit(() => { const e = examById(t.dataset.id); if (e) e.sim = parseInt(t.value, 10) || null; }); return; }
   if (f === 'date' && ui.sheet) { if (t.value) ui.sheet.date = t.value; renderSheet(); }
   if (f === 'start' && ui.sheet) { if (t.value) { ui.sheet.start = t.value; ui.sheet.startTouched = true; } renderSheet(); }
   if (f === 'tint' && ui.sheet) { ui.sheet.tint = t.value.toUpperCase(); renderSheet(); }
@@ -1359,6 +1394,7 @@ function endSwipe() {
   const s = sw; sw = null;
   if (!s.active) return;
   suppressClick = Date.now();
+  keepPlace(s.row);
   s.fg.style.transition = 'transform .25s ease';
   s.fg.style.transform = '';
   const { id, course } = s.row.dataset;

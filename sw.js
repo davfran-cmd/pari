@@ -1,6 +1,6 @@
 // Service worker: salva l'app in cache al primo caricamento, poi funziona senza rete.
 // Quando modifichi i file dell'app, incrementa VERSION per far aggiornare la cache.
-const VERSION = 'pari-v6';
+const VERSION = 'pari-v7';
 const ASSETS = [
   './',
   './index.html',
