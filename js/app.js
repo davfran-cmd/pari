@@ -1,4 +1,4 @@
-/* Pari: presenze, recuperi e appunti. Tutti i dati restano in localStorage sul dispositivo. */
+/* Procedo: presenze, recuperi e appunti. Tutti i dati restano in localStorage sul dispositivo. */
 (() => {
 'use strict';
 
@@ -363,7 +363,7 @@ function remindBanner() {
 function welcome() {
   return `<section class="empty">
     <span class="ico">${I.folderPlus()}</span>
-    <h2>Benvenuto in Pari</h2>
+    <h2>Benvenuto in Procedo</h2>
     <p>Crea il semestre in corso per tenere traccia di presenze, recuperi e appunti. I dati restano solo su questo dispositivo.</p>
     <button class="pill-btn" data-act="new-sem">${I.plus(18)}Crea semestre</button>
   </section>`;
@@ -472,7 +472,7 @@ function courseDetail(c, wide) {
   const rows = numbered.slice().reverse().filter(({ l }) => (f === 'miss' ? l.p === 'M' : f === 'notes' ? !l.a : true));
   const filters = [['all', wide ? 'Tutte le lezioni' : 'Tutte'], ['miss', 'Da recuperare'], ['notes', 'Appunti indietro']];
   let empty = '';
-  if (!st.total) empty = `<li class="list-empty"><b>Nessuna lezione</b><span>${(c.days || []).length ? 'Le lezioni dei giorni in calendario si aggiungeranno da sole. Per quelle già fatte usa il tasto qui sotto.' : 'Imposta i giorni di lezione da Modifica: Pari aggiungerà da solo le lezioni di quei giorni.'}</span></li>`;
+  if (!st.total) empty = `<li class="list-empty"><b>Nessuna lezione</b><span>${(c.days || []).length ? 'Le lezioni dei giorni in calendario si aggiungeranno da sole. Per quelle già fatte usa il tasto qui sotto.' : 'Imposta i giorni di lezione da Modifica: Procedo aggiungerà da solo le lezioni di quei giorni.'}</span></li>`;
   else if (!rows.length) empty = `<li class="list-empty"><b>Sei in pari</b><span>${f === 'miss' ? 'Nessuna lezione da recuperare.' : 'Tutti gli appunti sono sistemati.'}</span></li>`;
   return `
     <header class="chead">${codeIcon(c, 52, 14, 18)}<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><h1>${esc(c.name)}</h1>${meta ? `<span class="sub">${esc(meta)}</span>` : ''}</div></header>
@@ -709,7 +709,7 @@ function settingsBody() {
       <li><button class="srow" data-act="wipe"><span class="sicon" style="background:#8E8E93">${I.trash()}</span><span class="sbody danger">Cancella tutti i dati</span></button></li>
     </ul>
     <p class="foot">Il backup è un file .json: salvalo in File o iCloud Drive per recuperare i dati se cambi dispositivo.</p>
-    <p class="about">Pari · funziona offline<br>I dati sono salvati solo su questo dispositivo.</p>`;
+    <p class="about">Procedo · funziona offline<br>I dati sono salvati solo su questo dispositivo.</p>`;
 }
 function phoneSettings() {
   return `<div class="page no-nav"><div class="topbar"><a class="glass gbtn circle" href="#/" aria-label="Indietro">${I.back()}</a></div>${settingsBody()}</div>`;
@@ -737,7 +737,7 @@ function viewWide(r) {
   const open = sideOpen();
   const side = open ? `<aside class="wside glass" aria-label="Barra laterale">
     <div class="wside-top"><button class="icon-btn" data-act="toggle-side" aria-label="Nascondi barra laterale">${I.sidebar()}</button></div>
-    <span class="brand">Pari</span>
+    <span class="brand">Procedo</span>
     <span class="grp">${sem ? esc(sem.title) : 'Semestre attuale'}</span>
     ${courses.map((c) => { const m = stats(c).m; const on = onSemester && c.id === selId; return `<a class="sitem ${on ? 'on' : ''}" href="#/corso/${c.id}" ${on ? 'aria-current="page"' : ''}>${codeIcon(c, 28, 8, 11)}<span class="nm">${esc(c.name)}</span>${m ? `<span class="sbadge">${m}</span>` : ''}</a>`; }).join('')}
     ${sem ? `<button class="sitem add" data-act="new-course"><span class="ib">${I.plus(20, 2.4)}</span>Aggiungi corso</button>` : ''}
@@ -930,7 +930,7 @@ function sheetTarget(s) {
     <div class="group">
       <div class="grow"><label for="f-tg">Media obiettivo</label><input id="f-tg" class="right" type="text" inputmode="decimal" data-field="target" placeholder="27,5" value="${esc(s.target)}" autocomplete="off"></div>
     </div>
-    <p class="sheet-note">Pari calcola il voto medio che ti serve nei ${S.degreeCfu} CFU del corso di laurea che non hai ancora acquisito. Se alcuni esami da sostenere sono a idoneità, inseriscili nel Libretto come “Idoneità”: così non pesano nel calcolo.</p>
+    <p class="sheet-note">Procedo calcola il voto medio che ti serve nei ${S.degreeCfu} CFU del corso di laurea che non hai ancora acquisito. Se alcuni esami da sostenere sono a idoneità, inseriscili nel Libretto come “Idoneità”: così non pesano nel calcolo.</p>
     ${S.target ? '<button class="danger-btn" data-act="clear-target">Rimuovi obiettivo</button>' : ''}`;
 }
 function sheetDegree(s) {
@@ -1232,13 +1232,13 @@ function setDegree(v) {
   if (first) toast(`Corso di laurea da ${deg} CFU`);
 }
 async function exportData() {
-  const name = `pari-backup-${todayISO()}.json`;
+  const name = `procedo-backup-${todayISO()}.json`;
   const json = JSON.stringify({ app: 'pari', version: 1, exportedAt: new Date().toISOString(), state: S }, null, 2);
   // App Android: salva il file con il selettore di sistema (la WebView non supporta share/download).
   if (window.PariAndroid) { window.PariAndroid.saveFile(name, json); return; }
   const file = new File([json], name, { type: 'application/json' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'Backup Pari' }); return; }
+    try { await navigator.share({ files: [file], title: 'Backup Procedo' }); return; }
     catch (e) { if (e && e.name === 'AbortError') return; }
   }
   const a = document.createElement('a');
@@ -1252,7 +1252,7 @@ function importData(file) {
     let obj;
     try { obj = JSON.parse(rd.result); } catch (e) { toast('File non valido', true); return; }
     const st = obj && obj.state ? obj.state : obj;
-    if (!st || !Array.isArray(st.semesters) || !Array.isArray(st.courses)) { toast('Non è un backup di Pari', true); return; }
+    if (!st || !Array.isArray(st.semesters) || !Array.isArray(st.courses)) { toast('Non è un backup di Procedo', true); return; }
     const n = st.courses.length;
     if (!confirm(`Importare il backup (${n} ${plural(n, 'corso', 'corsi')})? I dati attuali su questo dispositivo verranno sostituiti.`)) return;
     S = migrate(st); save(); ui.sel = null;
