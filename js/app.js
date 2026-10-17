@@ -26,7 +26,7 @@ const I = {
   gridO: (s = 24) => sv(s, '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>', 'fill="none" stroke="currentColor" stroke-width="1.9"'),
   archO: (s = 24) => sv(s, '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>', STROKE(1.9)),
   archF: (s = 24) => sv(s, '<rect x="2.6" y="3.6" width="18.8" height="5.6" rx="1.6"/><path d="M4.3 10.6h15.4v7.6a2.6 2.6 0 0 1-2.6 2.6H6.9a2.6 2.6 0 0 1-2.6-2.6z M10 13.1h4a.85.85 0 0 1 0 1.7h-4a.85.85 0 0 1 0-1.7z"/>', 'fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"'),
-  person: (s = 20) => sv(s, '<circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="9.8" r="3.1"/><path d="M6.3 18.6c1.3-1.9 3.3-2.9 5.7-2.9s4.4 1 5.7 2.9"/>', STROKE(1.7)),
+  person: (s = 20) => sv(s, '<circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="9.6" r="3.2"/><path d="M5.6 18.4c1.5-2.1 3.8-3.2 6.4-3.2s4.9 1.1 6.4 3.2"/>', STROKE(1.7)),
   back: (s = 20) => sv(s, '<path d="m15 5-7 7 7 7"/>', STROKE(2.4)),
   close: (s = 16) => sv(s, '<path d="M6 6l12 12M18 6 6 18"/>', STROKE(2.8)),
   check: (s = 14, w = 2.8) => sv(s, '<path d="m5 12 5 5 9-10"/>', STROKE(w)),
@@ -39,20 +39,20 @@ const I = {
   restore: (s = 18) => sv(s, '<path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/>', STROKE(2.4)),
   chev: (s = 14, w = 2.8, cls = '') => sv(s, '<path d="m9 5 7 7-7 7"/>', STROKE(w) + (cls ? ` class="${cls}"` : '')),
   sidebar: (s = 22) => sv(s, '<rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M9.5 4.5v15M5.5 8.5h1.5M5.5 11h1.5"/>', STROKE(1.8)),
-  sliders: (s = 22) => sv(s, '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>', STROKE(1.9)),
+  sliders: (s = 22) => sv(s, '<path d="M4 6h8.5M17.5 6H20M4 12h1.5M10.5 12H20M4 18h6.5M15.5 18H20"/><circle cx="15" cy="6" r="2.5"/><circle cx="8" cy="12" r="2.5"/><circle cx="13" cy="18" r="2.5"/>', STROKE(1.8)),
   cal: (s = 17) => sv(s, '<rect x="3.2" y="4.6" width="17.6" height="16" rx="3"/><path d="M3.2 9.6h17.6M8 2.8v3.4M16 2.8v3.4"/>', STROKE(2)),
   bell: (s = 16) => sv(s, '<path d="M12 2.4c.8 0 1.4.6 1.4 1.4v.45a6.1 6.1 0 0 1 4.7 5.95v3.5l1.55 2.25c.5.75-.03 1.75-.93 1.75H5.28c-.9 0-1.43-1-.93-1.75L5.9 13.7v-3.5a6.1 6.1 0 0 1 4.7-5.95V3.8c0-.8.6-1.4 1.4-1.4z M9.6 19.05h4.8a2.4 2.4 0 0 1-4.8 0z"/>', 'fill="currentColor"'),
   box: (s = 16) => sv(s, '<rect x="2.6" y="3.6" width="18.8" height="5.6" rx="1.6"/><path d="M4.3 10.6h15.4v7.6a2.6 2.6 0 0 1-2.6 2.6H6.9a2.6 2.6 0 0 1-2.6-2.6z M10 13.1h4a.85.85 0 0 1 0 1.7h-4a.85.85 0 0 1 0-1.7z"/>', 'fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"'),
-  folderPlus: (s = 64) => sv(s, '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10l2 2h6.5A1.5 1.5 0 0 1 20 7.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M12 10v6M9 13h6"/>', STROKE(1.4)),
-  share: (s = 17) => sv(s, '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>', STROKE(2.2)),
-  download: (s = 17) => sv(s, '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>', STROKE(2.2)),
-  trash: (s = 17) => sv(s, '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>', STROKE(2)),
+  folderPlus: (s = 64) => sv(s, '<path d="M20.5 11V8.4a2 2 0 0 0-2-2h-6.3L10.6 4.6a2 2 0 0 0-1.4-.6H5.5a2 2 0 0 0-2 2v11.6a2 2 0 0 0 2 2H11"/><circle cx="17.5" cy="17.5" r="4.5"/><path d="M17.5 15.4v4.2M15.4 17.5h4.2"/>', STROKE(1.7)),
+  share: (s = 17) => sv(s, '<path d="M8.5 9.5H7.2a2.2 2.2 0 0 0-2.2 2.2v7.1a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2v-7.1a2.2 2.2 0 0 0-2.2-2.2h-1.3"/><path d="M12 3v11M8.6 6.3 12 2.9l3.4 3.4"/>', STROKE(2)),
+  download: (s = 17) => sv(s, '<path d="M8.5 9.5H7.2a2.2 2.2 0 0 0-2.2 2.2v7.1a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2v-7.1a2.2 2.2 0 0 0-2.2-2.2h-1.3"/><path d="M12 3v11M8.6 10.7 12 14.1l3.4-3.4"/>', STROKE(2)),
+  trash: (s = 17) => sv(s, '<path d="M4 6.5h16M9 6.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v1.5M6 6.5l.9 12.6A2 2 0 0 0 8.9 21h6.2a2 2 0 0 0 2-1.9L18 6.5M10 10.5v6.5M14 10.5v6.5"/>', STROKE(1.9)),
   clock: (s = 17) => sv(s, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', STROKE(2)),
   bookO: (s = 24) => sv(s, '<path d="M12 6.6C10.2 5.2 7.6 4.6 4.3 4.6v13.2c3.3 0 5.9.6 7.7 2 1.8-1.4 4.4-2 7.7-2V4.6c-3.3 0-5.9.6-7.7 2z"/><path d="M12 6.6v13.2"/>', STROKE(1.9)),
   bookF: (s = 24) => sv(s, '<path d="M11.2 5.7C9.3 4.4 6.8 3.8 3.6 3.8a.9.9 0 0 0-.9.9v13.2c0 .5.4.9.9.9 3 0 5.4.6 7.2 1.8.2.1.4 0 .4-.2z M12.8 5.7c1.9-1.3 4.4-1.9 7.6-1.9.5 0 .9.4.9.9v13.2c0 .5-.4.9-.9.9-3 0-5.4.6-7.2 1.8-.2.1-.4 0-.4-.2z"/>', 'fill="currentColor"'),
   target: (s = 17) => sv(s, '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>', STROKE(2)),
   updown: (s = 12) => sv(s, '<path d="m7 9 5-5 5 5M7 15l5 5 5-5"/>', STROKE(2.6)),
-  wand: (s = 17) => sv(s, '<path d="m4 20 11-11M14 4v3M12.5 5.5h3M19 9v3M17.5 10.5h3M8 3v2M7 4h2"/>', STROKE(2))
+  wand: (s = 17) => sv(s, '<path d="M4.5 19.5 14.5 9.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M16.5 1.9Q16.5 4.5 19.1 4.5Q16.5 4.5 16.5 7.1Q16.5 4.5 13.9 4.5Q16.5 4.5 16.5 1.9ZM20.2 8Q20.2 10 22.2 10Q20.2 10 20.2 12Q20.2 10 18.2 10Q20.2 10 20.2 8ZM9.5 2.3Q9.5 4 11.2 4Q9.5 4 9.5 5.7Q9.5 4 7.8 4Q9.5 4 9.5 2.3Z" fill="currentColor"/>', '')
 };
 
 /* ---------- Utilità ---------- */
@@ -172,7 +172,7 @@ if (NATIVE && !NATIVE.loadState() && localStorage.getItem(KEY)) save();
 function commit(fn) { fn(); save(); render(); }
 
 /* Stato UI (non salvato) */
-const ui = { filter: 'all', sel: null, side: null, open: {}, sheet: null, sheetNew: false, toast: null };
+const ui = { rings: {}, filter: 'all', sel: null, side: null, open: {}, sheet: null, sheetNew: false, toast: null };
 
 /* ---------- Modello ---------- */
 const curSem = () => S.semesters.find((s) => s.status === 'current') || null;
@@ -285,7 +285,7 @@ function runAutoSync() {
 
 /* ---------- Componenti ---------- */
 const codeIcon = (c, size, radius, font) =>
-  `<span class="code-icon" aria-hidden="true" style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${esc(c.tint)};color:${onTint(c.tint)};font-size:${font}px">${esc(c.code || '?')}</span>`;
+  `<span class="code-icon${radius * 2 >= size ? ' round' : ''}" aria-hidden="true" style="width:${size}px;height:${size}px;background:${esc(c.tint)};color:${onTint(c.tint)};font-size:${font}px">${esc(c.code || '?')}</span>`;
 
 function segBar(L, h = 8) {
   if (!L.length) return `<div class="track" style="height:${h}px"></div>`;
@@ -297,17 +297,37 @@ function segBar(L, h = 8) {
 function notesBar(p, knob = true, h = 8) {
   return `<div class="nbar" style="height:${h}px"><div class="nfill" style="width:${p}%"></div>${knob ? `<div class="knob" style="left:clamp(-2px, calc(${p}% - 9px), calc(100% - 16px))"></div>` : ''}</div>`;
 }
-function rings(size, pA, pB, aria, pM = 0) {
-  const cA = 2 * Math.PI * 46, cB = 2 * Math.PI * 30;
-  const arc = (r, c, p, col) => `<circle cx="54" cy="54" r="${r}" fill="none" stroke="${col}" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(1)} 999" transform="rotate(-90 54 54)"${p <= 0 ? ' stroke-opacity="0"' : ''}/>`;
-  return `<svg width="${size}" height="${size}" viewBox="0 0 108 108" role="img" aria-label="${esc(aria)}">
-    <circle cx="54" cy="54" r="46" fill="none" stroke="var(--blue)" stroke-opacity="0.18" stroke-width="13"/>${pM > 0 ? `<circle cx="54" cy="54" r="46" fill="none" stroke="var(--orange)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(cA * pM).toFixed(1)} 999" stroke-dashoffset="${(-cA * pA).toFixed(1)}" transform="rotate(-90 54 54)"/>` : ''}${arc(46, cA, pA, 'var(--blue)')}
-    <circle cx="54" cy="54" r="30" fill="none" stroke="var(--mint)" stroke-opacity="0.2" stroke-width="13"/>${arc(30, cB, pB, 'var(--mint)')}
-  </svg>`;
+/* Anelli in stile Fitness, uguali in tutta l'app: stesso spessore, gradiente vivo su una traccia dello
+   stesso colore, estremità arrotondate. `rings` = anelli dall'esterno: { color, arcs: [{ p, start, color }] }.
+   Gli archi si animano dal valore mostrato prima (da zero quando entri nella schermata); `key` distingue gli anelli. */
+const RING_W = 14, RING_R = [46, 30];
+function ringSvg(size, rings, aria, key) {
+  const prev = ui.rings[key], lens = [];
+  let body = '';
+  rings.forEach((ring, k) => {
+    const r = RING_R[k], C = 2 * Math.PI * r;
+    body += `<circle cx="54" cy="54" r="${r}" fill="none" stroke="var(--track-${ring.color})" stroke-width="${RING_W}"/>`;
+    ring.arcs.forEach((a) => {
+      const len = C * Math.max(0, Math.min(1, a.p)), from = prev ? prev[lens.length] : 0;
+      lens.push(len);
+      if (len <= 0) return; // con le estremità arrotondate un arco vuoto lascerebbe un puntino
+      const anim = Math.abs(from - len) > 0.5
+        ? `<animate attributeName="stroke-dasharray" from="${from.toFixed(1)} 999" to="${len.toFixed(1)} 999" dur="1s" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.85 0.3 1" fill="freeze"/>` : '';
+      body += `<circle cx="54" cy="54" r="${r}" fill="none" stroke="url(#rg-${a.color || ring.color})" stroke-width="${RING_W}" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} 999" stroke-dashoffset="${(-C * (a.start || 0)).toFixed(1)}" transform="rotate(-90 54 54)">${anim}</circle>`;
+    });
+  });
+  ui.rings[key] = lens;
+  const grad = (c) => `<linearGradient id="rg-${c}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--ring-${c}-a)"/><stop offset="1" stop-color="var(--ring-${c}-b)"/></linearGradient>`;
+  return `<svg class="fring" width="${size}" height="${size}" viewBox="0 0 108 108" ${aria ? `role="img" aria-label="${esc(aria)}"` : 'aria-hidden="true"'}>
+    <defs>${grad('blue')}${grad('mint')}${grad('orange')}</defs>${body}</svg>`;
 }
-function ringsFor(ss, size) {
+const RING_SIZE = 120;
+function ringsFor(ss, size, key) {
   const pA = ss.total ? ss.inPari / ss.total : 0, pB = ss.total ? ss.notes / ss.total : 0, pM = ss.total ? ss.m / ss.total : 0;
-  return rings(size, pA, pB, `${ss.inPari} lezioni in pari su ${ss.total}, ${ss.m} da recuperare, ${ss.notes} appunti sistemati`, pM);
+  return ringSvg(size, [
+    { color: 'blue', arcs: [{ p: pM, start: pA, color: 'orange' }, { p: pA }] },
+    { color: 'mint', arcs: [{ p: pB }] }
+  ], `${ss.inPari} lezioni in pari su ${ss.total}, ${ss.m} da recuperare, ${ss.notes} appunti sistemati`, key);
 }
 function navBar(active, courseId) {
   // Nel Libretto il tasto + aggiunge un esame (anche senza corsi), dopo aver scelto i CFU del corso di laurea.
@@ -318,7 +338,7 @@ function navBar(active, courseId) {
   const tab = (id, href, on, off, label) => `<a class="tab ${active === id ? 'on' : ''}" href="${href}" ${active === id ? 'aria-current="page"' : ''}>${active === id ? on : off}${label}</a>`;
   return `<nav class="nav" aria-label="Navigazione principale">
     <div class="tabbar glass">
-      ${tab('home', '#/', I.grid(), I.gridO(), 'Semestre')}
+      ${tab('home', '#/', I.grid(), I.gridO(), 'Corsi')}
       ${tab('lib', '#/libretto', I.bookF(), I.bookO(), 'Libretto')}
       ${tab('arch', '#/archivio', I.archF(), I.archO(), 'Archivio')}
     </div>
@@ -399,7 +419,7 @@ function summaryCard(courses) {
   const ss = semStats(courses);
   return `<section class="card summary mx" aria-label="Stato generale">
     <div class="summary-top">
-      ${ringsFor(ss, 108)}
+      ${ringsFor(ss, RING_SIZE, "sem")}
       <div class="summary-nums">
         <div class="knum"><span class="klabel" style="color:${ss.m ? 'var(--orangeText)' : 'var(--label2)'}">${I.warn(13)}Da recuperare</span><span class="kval ${ss.m ? 'alert' : ''}">${ss.m} <small>${plural(ss.m, 'lezione', 'lezioni')}</small></span></div>
         <div class="knum"><span class="klabel" style="color:var(--mintText)">${I.doc(13)}Appunti da sistemare</span><span class="kval">${ss.gap} <small>${plural(ss.gap, 'lezione', 'lezioni')}</small></span></div>
@@ -478,7 +498,7 @@ function courseDetail(c, wide) {
 function phoneCourse(c) {
   return `<div class="page">
     <div class="topbar between">
-      <a class="glass gbtn circle" href="#/" aria-label="Indietro: Semestre">${I.back()}</a>
+      <a class="glass gbtn circle" href="#/" aria-label="Indietro: Corsi">${I.back()}</a>
       <button class="glass gbtn" style="padding:0 18px" data-act="edit-course" data-id="${c.id}">Modifica</button>
     </div>
     ${courseDetail(c, false)}
@@ -564,27 +584,16 @@ function examRow(e) {
   }
   return `<li class="exrow"><button class="ex-main" data-act="edit-exam" data-id="${e.id}">${codeIcon(look, 36, 10, 13)}<span class="t"><b>${esc(e.name)}</b><span>${esc(info)}</span></span></button>${right}</li>`;
 }
-/* Anello dei CFU in stile Fitness: si chiude man mano che superi esami. Quando il valore cambia
-   (o entri nel Libretto) l'arco si anima dal valore precedente al nuovo. */
-function cfuRing(cfu, total, size) {
-  const p = total ? Math.min(1, cfu / total) : 0;
-  const r = 44, C = 2 * Math.PI * r, len = (C * p).toFixed(1);
-  const from = ui.ringFrom;
-  ui.ringFrom = p;
-  const anim = from !== p
-    ? `<animate attributeName="stroke-dasharray" from="${(C * (from || 0)).toFixed(1)} 999" to="${len} 999" dur="1s" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.85 0.3 1" fill="freeze"/>` : '';
-  return `<svg class="fring" width="${size}" height="${size}" viewBox="0 0 108 108" aria-hidden="true">
-    <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--ringA)"/><stop offset="1" stop-color="var(--ringB)"/></linearGradient></defs>
-    <circle cx="54" cy="54" r="${r}" fill="none" stroke="var(--ringTrack)" stroke-width="16"/>
-    ${p > 0 ? `<circle cx="54" cy="54" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="${len} 999" transform="rotate(-90 54 54)">${anim}</circle>` : ''}
-  </svg>`;
+// Anello dei CFU del Libretto: stesso componente e stessa misura degli anelli della scheda Corsi.
+function cfuRing(cfu, total, key) {
+  return ringSvg(RING_SIZE, [{ color: 'mint', arcs: [{ p: total ? cfu / total : 0 }] }], '', key);
 }
 function libSummary(st) {
   const total = Number(S.degreeCfu) || 0;
   const done = total && st.cfu >= total;
   return `<section class="card lib-sum mx" aria-label="CFU e media">
     <button class="lib-ring" data-act="edit-degree" aria-label="${st.cfu} CFU acquisiti su ${total}. Tocca per cambiare i CFU del corso di laurea">
-      ${cfuRing(st.cfu, total, 136)}
+      ${cfuRing(st.cfu, total, "cfu")}
       <span class="ring-center">${done ? I.check(30, 3.4) : `<b>${st.cfu}</b><span>di ${total} CFU</span>`}</span>
     </button>
     <div class="lib-nums">
@@ -598,7 +607,7 @@ const DEGREES = [[180, 'Laurea triennale', '3 anni'], [120, 'Laurea magistrale',
 // Primo avvio del Libretto: prima di tutto serve il totale dei CFU del corso di laurea.
 function degreeSetup() {
   return `<section class="lib-setup">
-      <span class="lib-ring">${cfuRing(0, 0, 120)}<span class="ring-center">${I.bookF(34)}</span></span>
+      <span class="lib-ring">${cfuRing(0, 0, "setup")}<span class="ring-center">${I.bookF(34)}</span></span>
       <h2>Quanti CFU vale il tuo corso di laurea?</h2>
       <p>Serve a chiudere l'anello dei CFU e a calcolare il voto che ti serve per la media che vuoi. Puoi cambiarlo quando vuoi.</p>
     </section>
@@ -752,7 +761,7 @@ function viewWide(r) {
     else body = `<div class="wcols">
       <section class="wover" data-scroll="over" aria-label="Panoramica">
         ${semesterHead(sem).replace('class="head"', 'class="head" style="padding:4px 4px 6px"')}
-        <div class="card wsum">${ringsFor(semStats(courses), 92)}<div class="summary-nums" style="gap:10px">
+        <div class="card wsum">${ringsFor(semStats(courses), 104, "sem")}<div class="summary-nums" style="gap:10px">
           <div class="knum"><span class="klabel" style="color:${semStats(courses).m ? 'var(--orangeText)' : 'var(--label2)'}">Da recuperare</span><span class="kval ${semStats(courses).m ? 'alert' : ''}">${semStats(courses).m} <small>lezioni</small></span></div>
           <div class="knum"><span class="klabel" style="color:var(--mintText)">Appunti da sistemare</span><span class="kval">${semStats(courses).gap} <small>lezioni</small></span></div>
         </div></div>
@@ -779,7 +788,7 @@ function viewWide(r) {
 /* ---------- Fogli ---------- */
 function sheetHead(title, okAct, okDisabled, okLabel) {
   return `<div class="sheet-head">
-    <button class="glass gbtn circle" data-act="close-sheet" aria-label="Chiudi">${I.close()}</button>
+    <button class="gbtn circle close" data-act="close-sheet" aria-label="Chiudi">${I.close()}</button>
     <h2 id="sheet-title">${title}</h2>
     ${okAct ? `<button class="gbtn circle ok" data-act="${okAct}" aria-label="${okLabel || 'Salva'}" ${okDisabled ? 'disabled' : ''}>${I.check(18)}</button>` : '<span class="spacer"></span>'}
   </div>`;
@@ -876,9 +885,9 @@ function sheetConclude() {
   const sem = curSem();
   const courses = curCourses();
   const ss = semStats(courses);
-  return `<div class="sheet-head"><button class="glass gbtn circle" data-act="close-sheet" aria-label="Chiudi">${I.close()}</button><h2>Riepilogo</h2><span class="spacer"></span></div>
+  return `<div class="sheet-head"><button class="gbtn circle close" data-act="close-sheet" aria-label="Chiudi">${I.close()}</button><h2>Riepilogo</h2><span class="spacer"></span></div>
     <div class="conc-head"><h2 id="sheet-title">Concludi il ${esc(sem.title)}</h2><p>${courses.length === 1 ? 'Il corso passa' : `I ${courses.length} corsi passano`} in Archivio e la Home si svuota per il nuovo semestre.</p></div>
-    <div class="card conc-stats">${ringsFor(ss, 104)}<div class="conc-grid">
+    <div class="card conc-stats">${ringsFor(ss, RING_SIZE, "conc")}<div class="conc-grid">
       <div><span>Lezioni</span><b>${ss.total}</b></div>
       <div><span style="color:var(--blueText)">In pari</span><b>${pct(ss.inPari, ss.total)}<small>%</small></b></div>
       <div><span style="color:var(--orangeText)">Da recuperare</span><b>${ss.m}</b></div>
@@ -941,7 +950,7 @@ function renderSheet() {
   const scroll = prev ? prev.scrollTop : 0;
   const html = { lesson: sheetLesson, course: sheetCourse, semester: sheetSemester, conclude: sheetConclude, past: sheetPast, exam: sheetExam, target: sheetTarget, degree: sheetDegree }[s.type](s);
   const full = s.type === 'conclude' && !wideMQ.matches;
-  root.innerHTML = `<div class="backdrop" data-act="close-sheet"></div><section class="sheet ${full ? 'full' : ''} ${ui.sheetNew ? 'anim' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title">${html}</section>`;
+  root.innerHTML = `<div class="backdrop" data-act="close-sheet"></div><section class="sheet ${full ? 'full' : ''} ${ui.sheetNew ? 'anim' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="grabber" aria-hidden="true"></div>${html}</section>`;
   root.querySelector('.sheet').scrollTop = scroll;
   ui.sheetNew = false;
 }
@@ -1026,7 +1035,7 @@ window.addEventListener('hashchange', () => {
   const wasDetail = /^#\/corso\//.test(prev), isDetail = /^#\/corso\//.test(location.hash);
   if (!ui.keepFilter) ui.filter = 'all';
   ui.keepFilter = false;
-  ui.ringFrom = null; // entrando nel Libretto l'anello si richiude da zero
+  ui.rings = {}; // entrando in una schermata gli anelli si richiudono da zero
 
   render();
   if (!(wideMQ.matches && wasDetail && isDetail)) {
