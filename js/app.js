@@ -2,7 +2,8 @@
 (() => {
 'use strict';
 
-const KEY = 'pari.state.v1';
+const KEY = 'procedo.state.v1';
+const OLD_KEY = 'pari.state.v1'; // nome usato dalle prime versioni: i dati si spostano da soli sotto KEY
 // Colori dei corsi: mai blu, arancione o menta (sono i colori di stato).
 const TINTS = [
   '#CB30E0', '#FF2D55', '#6155F5', '#AC7F5E', '#00C3D0', '#34C759', '#FF383C', '#8E8E93',
@@ -52,6 +53,7 @@ const I = {
   bookF: (s = 24) => sv(s, '<path d="M11.2 5.7C9.3 4.4 6.8 3.8 3.6 3.8a.9.9 0 0 0-.9.9v13.2c0 .5.4.9.9.9 3 0 5.4.6 7.2 1.8.2.1.4 0 .4-.2z M12.8 5.7c1.9-1.3 4.4-1.9 7.6-1.9.5 0 .9.4.9.9v13.2c0 .5-.4.9-.9.9-3 0-5.4.6-7.2 1.8-.2.1-.4 0-.4-.2z"/>', 'fill="currentColor"'),
   target: (s = 17) => sv(s, '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>', STROKE(2)),
   updown: (s = 12) => sv(s, '<path d="m7 9 5-5 5 5M7 15l5 5 5-5"/>', STROKE(2.6)),
+  info: (s = 15) => sv(s, '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/>', STROKE(2.2)),
   wand: (s = 17) => sv(s, '<path d="M4.5 19.5 14.5 9.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M16.5 1.9Q16.5 4.5 19.1 4.5Q16.5 4.5 16.5 7.1Q16.5 4.5 13.9 4.5Q16.5 4.5 16.5 1.9ZM20.2 8Q20.2 10 22.2 10Q20.2 10 20.2 12Q20.2 10 18.2 10Q20.2 10 20.2 8ZM9.5 2.3Q9.5 4 11.2 4Q9.5 4 9.5 5.7Q9.5 4 7.8 4Q9.5 4 9.5 2.3Z" fill="currentColor"/>', '')
 };
 
@@ -151,11 +153,11 @@ function migrate(s) {
   return out;
 }
 // App Android: i dati stanno in un file scritto subito (vedi MainActivity); localStorage resta come copia.
-const NATIVE = window.PariAndroid && window.PariAndroid.saveState ? window.PariAndroid : null;
+const NATIVE = window.ProcedoAndroid && window.ProcedoAndroid.saveState ? window.ProcedoAndroid : null;
 function load() {
   try {
     // Al primo avvio della versione col file, i dati arrivano dal localStorage e passano nel file.
-    const raw = (NATIVE && NATIVE.loadState()) || localStorage.getItem(KEY);
+    const raw = (NATIVE && NATIVE.loadState()) || localStorage.getItem(KEY) || localStorage.getItem(OLD_KEY);
     if (raw) return migrate(JSON.parse(raw));
   } catch (e) { /* stato corrotto: riparte vuoto */ }
   return defaultState();
@@ -169,6 +171,13 @@ function save() {
   if (!ok) toast('Impossibile salvare i dati', true);
 }
 if (NATIVE && !NATIVE.loadState() && localStorage.getItem(KEY)) save();
+// Dati salvati col vecchio nome: li riscrive sotto il nome nuovo e, solo se è andata bene, toglie la vecchia copia.
+try {
+  if (localStorage.getItem(OLD_KEY) != null) {
+    if (localStorage.getItem(KEY) == null) save();
+    if (localStorage.getItem(KEY) != null) localStorage.removeItem(OLD_KEY);
+  }
+} catch (e) { /* localStorage non disponibile */ }
 function commit(fn) { fn(); save(); render(); }
 
 /* Stato UI (non salvato) */
@@ -192,19 +201,23 @@ function stats(c) {
     if (!broke) { if (l.a) upTo = i + 1; else broke = true; }
   });
   const total = L.length;
-  return { L, total, s, r, m, done, upTo, inPari: total - m, gap: total - done };
+  return { L, total, s, r, m, done, upTo, onTrack: total - m, gap: total - done };
 }
+const lessonNum = (c, id) => sortedLessons(c).findIndex((l) => l.id === id) + 1;
+const P_LABEL = { S: 'Presente', M: 'Da recuperare', R: 'Recuperata' };
 function semStats(courses) {
   let total = 0, m = 0, gap = 0;
   courses.forEach((c) => { const st = stats(c); total += st.total; m += st.m; gap += st.gap; });
-  return { total, m, gap, inPari: total - m, notes: total - gap };
+  return { total, m, gap, onTrack: total - m, notes: total - gap };
 }
 function notesLabel(st) {
   if (!st.total) return 'Nessuna lezione';
-  if (st.upTo === st.total) return `Tutti, ${st.total} su ${st.total}`;
-  if (st.upTo === 0) return 'Da iniziare';
-  return 'Fermo alla Lez. ' + st.upTo;
+  if (st.done === st.total) return `Tutti, ${st.total} su ${st.total}`;
+  return `${st.done} su ${st.total}`;
 }
+// Da dove ripartire con gli appunti: la prima lezione non ancora sistemata.
+const notesNext = (st) => (st.total && st.done < st.total ? `Il primo da sistemare è la Lezione ${st.upTo + 1}` : '');
+const notesAria = (st) => `${st.done} appunti sistemati su ${st.total}`;
 function staleNotes() {
   if (!S.remind) return [];
   const lim = new Date(); lim.setDate(lim.getDate() - (S.remindDays || 3));
@@ -266,7 +279,7 @@ function autoSync() {
       for (let i = 0; isoOf(d) <= t && i < 400; i++, d = addDays(d, 1)) {
         const iso = isoOf(d);
         if (days.includes(d.getDay()) && !have.has(iso)) {
-          c.lessons.push({ id: uid(), date: iso, topic: '', p: S.autoP === 'M' ? 'M' : 'S', a: false, t: Date.now() + added, auto: true });
+          c.lessons.push({ id: uid(), date: iso, topic: '', p: S.autoP === 'M' ? 'M' : 'S', a: false, t: Date.now() + added, auto: true, chk: true });
           added++;
         }
       }
@@ -276,11 +289,18 @@ function autoSync() {
   if (added) save();
   return added;
 }
+// Lezioni aggiunte dal calendario che aspettano la tua conferma (c'eri o no?), dalla più vecchia.
+function pendingLessons() {
+  const out = [];
+  curCourses().forEach((c) => c.lessons.forEach((l) => { if (l.chk) out.push({ c, l }); }));
+  return out.sort((a, b) => (a.l.date < b.l.date ? -1 : a.l.date > b.l.date ? 1 : 0));
+}
+const dayName = (iso) => (iso === todayISO() ? 'Oggi' : iso === yesterdayISO() ? 'Ieri' : cap(fmtShort(iso)));
 function runAutoSync() {
   const n = autoSync();
   if (!n) return;
   render();
-  toast(`${n} ${plural(n, 'nuova lezione aggiunta', 'nuove lezioni aggiunte')} dal calendario`);
+  toast(`${n} ${plural(n, 'lezione aggiunta', 'lezioni aggiunte')} dal calendario: confermale nella Home`);
 }
 
 /* ---------- Componenti ---------- */
@@ -307,6 +327,7 @@ function ringSvg(size, rings, aria, key) {
   rings.forEach((ring, k) => {
     const r = RING_R[k], C = 2 * Math.PI * r;
     body += `<circle cx="54" cy="54" r="${r}" fill="none" stroke="var(--track-${ring.color})" stroke-width="${RING_W}"/>`;
+    // Gli archi si disegnano nell'ordine dato: l'ultimo sta sopra, con le estremità intere.
     ring.arcs.forEach((a) => {
       const len = C * Math.max(0, Math.min(1, a.p)), from = prev ? prev[lens.length] : 0;
       lens.push(len);
@@ -323,11 +344,11 @@ function ringSvg(size, rings, aria, key) {
 }
 const RING_SIZE = 120;
 function ringsFor(ss, size, key) {
-  const pA = ss.total ? ss.inPari / ss.total : 0, pB = ss.total ? ss.notes / ss.total : 0, pM = ss.total ? ss.m / ss.total : 0;
+  const pA = ss.total ? ss.onTrack / ss.total : 0, pB = ss.total ? ss.notes / ss.total : 0, pM = ss.total ? ss.m / ss.total : 0;
   return ringSvg(size, [
-    { color: 'blue', arcs: [{ p: pM, start: pA, color: 'orange' }, { p: pA }] },
+    { color: 'blue', arcs: [{ p: pA }, { p: pM, start: pA, color: 'orange' }] }, // arancione sopra il blu
     { color: 'mint', arcs: [{ p: pB }] }
-  ], `${ss.inPari} lezioni in pari su ${ss.total}, ${ss.m} da recuperare, ${ss.notes} appunti sistemati`, key);
+  ], `${ss.onTrack} lezioni in pari su ${ss.total}, ${ss.m} da recuperare, ${ss.notes} appunti sistemati`, key);
 }
 function navBar(active, courseId) {
   // Nel Libretto il tasto + aggiunge un esame (anche senza corsi), dopo aver scelto i CFU del corso di laurea.
@@ -359,6 +380,21 @@ function remindBanner() {
   return `<button class="remind" data-act="goto-notes" data-id="${top}">
     ${I.bell(18)}<span class="rtext"><b>${st.length} ${plural(st.length, 'appunto da sistemare', 'appunti da sistemare')}</b><span>Da più di ${d} ${plural(d, 'giorno', 'giorni')}. Tocca per vederli.</span></span>${I.chev(14, 2.8)}
   </button>`;
+}
+// Dopo le lezioni automatiche: un controllo veloce, così le assenze non passano per presenze.
+function checkinCard() {
+  const P = pendingLessons();
+  if (!P.length) return '';
+  const dates = [...new Set(P.map((x) => x.l.date))];
+  const names = [...new Set(P.map((x) => x.c.name))];
+  const who = names.length > 2 ? `${names.slice(0, 2).join(', ')} e ${names.length - 2} ${plural(names.length - 2, 'altro', 'altri')}` : names.join(' e ');
+  const when = dates.length === 1 ? dayName(dates[0]) : `${P.length} lezioni dal ${fmtShort(dates[0])}`;
+  const q = P.length === 1 ? "L'hai seguita?" : 'Le hai seguite?';
+  return `<section class="card checkin mx" aria-labelledby="ck-title">
+    <div class="ck-top">${I.cal(20)}<div class="t"><span>${esc(when)} · ${esc(who)}</span><b id="ck-title">${q}</b></div></div>
+    <div class="ck-btns"><button class="ck-yes" data-act="checkin-all">${I.check(15, 3)}${P.length === 1 ? 'Sì' : 'Sì, a tutte'}</button>
+    <button class="ck-pick" data-act="checkin-open">${P.length === 1 ? 'No, da recuperare' : 'Segna le assenze'}</button></div>
+  </section>`;
 }
 function welcome() {
   return `<section class="empty">
@@ -392,7 +428,7 @@ function missHero(st) {
 const byUrgency = (list) => list.map((c, i) => ({ c, i, m: stats(c).m })).sort((a, b) => b.m - a.m || a.i - b.i).map((x) => x.c);
 function courseCard(c) {
   const st = stats(c);
-  const np = pct(st.upTo, st.total);
+  const np = pct(st.done, st.total);
   const meta = [c.cfu ? c.cfu + ' CFU' : '', c.prof, daysLabel(c.days)].filter(Boolean).join(' · ') || 'Tocca per i dettagli';
   return `<article class="card course ${st.m ? 'has-miss' : ''}">
     <div class="course-head">
@@ -401,17 +437,17 @@ function courseCard(c) {
       <button class="add-lesson" data-act="new-lesson" data-id="${c.id}" aria-label="Aggiungi lezione a ${esc(c.name)}">${I.plus(15)}Lezione</button>
     </div>
     <a class="meter" href="#/corso/${c.id}">
-      <div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="big">${st.inPari}<small> / ${st.total}</small></span></div>
-      <div role="img" aria-label="${st.inPari} lezioni in pari su ${st.total}, ${st.m} da recuperare">${segBar(st.L)}</div>
-      <div class="mini-legend"><span><i class="dot" style="background:var(--blue)"></i>${st.s} seguite</span><span><i class="dot" style="background:var(--recup)"></i>${st.r} recuperate</span><span class="${st.m ? 'miss-legend' : ''}"><i class="dot" style="background:var(--orange)"></i>${st.m} da recuperare</span></div>
+      <div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="big">${st.onTrack}<small> / ${st.total}</small></span></div>
+      <div role="img" aria-label="${st.onTrack} lezioni in pari su ${st.total}, ${st.m} da recuperare">${segBar(st.L)}</div>
+      <div class="mini-legend"><span><i class="lg" style="color:var(--blue)">${I.check(12, 3.2)}</i>${st.s} seguite</span><span><i class="lg" style="color:var(--recup)">${I.recup(12, 3)}</i>${st.r} recuperate</span><span class="${st.m ? 'miss-legend' : ''}"><i class="lg" style="color:var(--orange)">${I.warn(12)}</i>${st.m} da recuperare</span></div>
     </a>
     <a class="meter" href="#/corso/${c.id}">
       <div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${notesLabel(st)}</span></div>
-      <div role="img" aria-label="Appunti sistemati fino alla lezione ${st.upTo} su ${st.total}">${notesBar(np)}</div>
+      <div role="img" aria-label="${notesAria(st)}">${notesBar(np)}</div>
     </a>
     ${st.m || st.gap ? `<div class="tags">
       ${st.m ? `<button class="tag orange solid" data-act="goto-filter" data-filter="miss" data-id="${c.id}">${I.warn(12)}${st.m} da recuperare</button>` : ''}
-      ${st.gap ? `<button class="tag mint" data-act="goto-filter" data-filter="notes" data-id="${c.id}">${I.doc(12)}${st.gap} ${plural(st.gap, 'appunto indietro', 'appunti indietro')}</button>` : ''}
+      ${st.gap ? `<button class="tag mint" data-act="goto-filter" data-filter="notes" data-id="${c.id}">${I.doc(12)}${st.gap} ${plural(st.gap, 'appunto da sistemare', 'appunti da sistemare')}</button>` : ''}
     </div>` : ''}
   </article>`;
 }
@@ -419,13 +455,13 @@ function summaryCard(courses) {
   const ss = semStats(courses);
   return `<section class="card summary mx" aria-label="Stato generale">
     <div class="summary-top">
-      ${ringsFor(ss, RING_SIZE, "sem")}
+      <button class="ring-btn" data-act="rings-help" aria-label="Cosa significano gli anelli">${ringsFor(ss, RING_SIZE, "sem")}</button>
       <div class="summary-nums">
         <div class="knum"><span class="klabel" style="color:${ss.m ? 'var(--orangeText)' : 'var(--label2)'}">${I.warn(13)}Da recuperare</span><span class="kval ${ss.m ? 'alert' : ''}">${ss.m} <small>${plural(ss.m, 'lezione', 'lezioni')}</small></span></div>
         <div class="knum"><span class="klabel" style="color:var(--mintText)">${I.doc(13)}Appunti da sistemare</span><span class="kval">${ss.gap} <small>${plural(ss.gap, 'lezione', 'lezioni')}</small></span></div>
       </div>
     </div>
-    <div class="legend"><span><i class="dot" style="background:var(--blue)"></i>${ss.inPari} di ${ss.total} in pari</span><span><i class="dot" style="background:var(--mint)"></i>${ss.notes} appunti pronti</span></div>
+    <div class="legend"><span><i class="lg" style="color:var(--blue)">${I.check(13, 3.2)}</i>${ss.onTrack} di ${ss.total} in pari</span><span><i class="lg" style="color:var(--mint)">${I.doc(13)}</i>${ss.notes} appunti sistemati</span><button class="ring-help" data-act="rings-help">${I.info(15)}Cosa significano</button></div>
   </section>`;
 }
 function phoneHome() {
@@ -438,6 +474,7 @@ function phoneHome() {
   if (!sem) return `<div class="page">${top}${welcome()}</div>${navBar('home')}`;
   if (!courses.length) return `<div class="page">${top}${semesterHead(sem)}${noCourses()}</div>${navBar('home')}`;
   return `<div class="page">${top}${semesterHead(sem)}
+    ${checkinCard()}
     <h2 class="title2 sec-head first">In evidenza</h2>
     ${summaryCard(courses)}
     ${remindBanner()}
@@ -449,16 +486,16 @@ function phoneHome() {
 
 /* ---------- Dettaglio corso ---------- */
 function lessonRow(l, n, c, ro) {
-  const P = { S: ['Presente', I.check(14)], M: ['Saltata', I.warn(14)], R: ['Recuperata', I.recup(14)] }[l.p];
-  const aria = { S: 'presente', M: 'saltata, da recuperare', R: 'recuperata' }[l.p];
+  const P = { S: ['Presente', I.check(14)], M: ['Da recuperare', I.warn(14)], R: ['Recuperata', I.recup(14)] }[l.p];
+  const aria = { S: 'presente', M: 'da recuperare', R: 'recuperata' }[l.p];
   return `<li class="lrow ${l.p === 'M' ? 'miss' : ''}" data-id="${l.id}" data-course="${c.id}">
     <div class="sw-bg l"><span>${I.recup(20, 2.4)}Recuperata</span></div>
     <div class="sw-bg r"><span>${I.docCheck(20)}${l.a ? 'Da sistemare' : 'Sistemati'}</span></div>
     <div class="lrow-fg">
-      <div class="lmain" data-act="edit-lesson" data-id="${l.id}" data-course="${c.id}">
-        <span class="lhead"><span class="ln">Lezione ${n}</span><span class="ld">${fmtShort(l.date)}${l.p === 'M' ? ' · da recuperare' : ''}</span></span>
+      <button class="lmain" data-act="edit-lesson" data-id="${l.id}" data-course="${c.id}" aria-label="Lezione ${n}, ${esc(fmtShort(l.date))}${l.topic ? ', ' + esc(l.topic) : ''}. Modifica">
+        <span class="lhead"><span class="ln">Lezione ${n}</span><span class="ld">${l.chk ? esc(clean(fmtDayMonth.format(parseISO(l.date)))) + ' · <b class="chk">da confermare</b>' : fmtShort(l.date)}</span></span>
         <span class="lt ${l.topic ? '' : 'none'}">${esc(l.topic || 'Argomento non indicato')}</span>
-      </div>
+      </button>
       <button class="pbtn ${l.p}" data-act="cycle" data-id="${l.id}" data-course="${c.id}" aria-label="Lezione ${n}: ${aria}. Tocca per cambiare stato">${P[1]}${P[0]}</button>
       <button class="abtn ${l.a ? 'on' : 'off'}" data-act="toggle-a" data-id="${l.id}" data-course="${c.id}" aria-pressed="${l.a}" aria-label="Appunti lezione ${n}: ${l.a ? 'sistemati' : 'da sistemare'}">${l.a ? I.docCheck(18) : I.docO(18)}<span class="alabel">${l.a ? 'Sistemati' : 'Da sistemare'}</span></button>
     </div>
@@ -470,7 +507,7 @@ function courseDetail(c, wide) {
   const meta = [c.cfu ? c.cfu + ' CFU' : '', c.prof, daysLabel(c.days)].filter(Boolean).join(' · ');
   const numbered = st.L.map((l, i) => ({ l, n: i + 1 }));
   const rows = numbered.slice().reverse().filter(({ l }) => (f === 'miss' ? l.p === 'M' : f === 'notes' ? !l.a : true));
-  const filters = [['all', wide ? 'Tutte le lezioni' : 'Tutte'], ['miss', 'Da recuperare'], ['notes', 'Appunti indietro']];
+  const filters = [['all', wide ? 'Tutte le lezioni' : 'Tutte'], ['miss', 'Da recuperare'], ['notes', 'Da sistemare']];
   let empty = '';
   if (!st.total) empty = `<li class="list-empty"><b>Nessuna lezione</b><span>${(c.days || []).length ? 'Le lezioni dei giorni in calendario si aggiungeranno da sole. Per quelle già fatte usa il tasto qui sotto.' : 'Imposta i giorni di lezione da Modifica: Procedo aggiungerà da solo le lezioni di quei giorni.'}</span></li>`;
   else if (!rows.length) empty = `<li class="list-empty"><b>Sei in pari</b><span>${f === 'miss' ? 'Nessuna lezione da recuperare.' : 'Tutti gli appunti sono sistemati.'}</span></li>`;
@@ -484,11 +521,11 @@ function courseDetail(c, wide) {
         <div class="stat"><span style="color:var(--mintText)">Appunti</span><b>${pct(st.done, st.total)}<small>%</small></b></div>
         ${wide ? `<div class="stat"><span style="color:${st.m ? 'var(--orangeText)' : 'var(--label2)'}">Da recuperare</span><b style="${st.m ? 'color:var(--orangeText)' : ''}">${st.m}</b></div>` : ''}
       </div>
-      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="val">${st.inPari} / ${st.total}</span></div>${segBar(st.L)}</div>
-      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${st.total && st.upTo === st.total ? 'Tutti sistemati' : notesLabel(st)}</span></div>${notesBar(pct(st.upTo, st.total))}</div>
+      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="val">${st.onTrack} / ${st.total}</span></div>${segBar(st.L)}</div>
+      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${st.total && st.done === st.total ? 'Tutti sistemati' : notesLabel(st)}</span></div><div role="img" aria-label="${notesAria(st)}">${notesBar(pct(st.done, st.total))}</div>${notesNext(st) ? `<span class="meter-sub">${notesNext(st)}</span>` : ''}</div>
     </section>
-    <div class="seg ${wide ? '' : 'mx'}" role="tablist" aria-label="Filtra lezioni" style="${wide ? '' : 'margin-top:20px'}">
-      ${filters.map(([id, lb]) => `<button role="tab" aria-selected="${f === id}" class="${f === id ? 'on' : ''}" data-act="filter" data-filter="${id}">${lb}</button>`).join('')}
+    <div class="seg ${wide ? '' : 'mx'}" role="group" aria-label="Filtra lezioni" style="${wide ? '' : 'margin-top:20px'}">
+      ${filters.map(([id, lb]) => `<button aria-pressed="${f === id}" class="${f === id ? 'on' : ''}" data-act="filter" data-filter="${id}">${lb}</button>`).join('')}
     </div>
     ${wide ? '' : '<h2 class="sec-label">Lezioni · dalla più recente</h2>'}
     <div class="lessons ${wide ? '' : 'mx'}"><ol class="list">${rows.map(({ l, n }) => lessonRow(l, n, c)).join('')}${empty}</ol></div>
@@ -530,7 +567,7 @@ function archiveBody() {
         </button>
         ${isOpen ? `<ul class="alist">${cs.map((c) => {
           const st = stats(c);
-          return `<li><a href="#/archivio/${c.id}">${codeIcon(c, 32, 9, 11)}<span class="t"><b>${esc(c.name)}</b><span class="${st.m ? 'warn' : ''}">${st.total} ${plural(st.total, 'lezione', 'lezioni')} · ${st.m ? st.m + ' non recuperate' : 'in pari'}</span></span>${I.chev(14, 2.8, 'chev')}</a></li>`;
+          return `<li><a href="#/archivio/${c.id}">${codeIcon(c, 32, 9, 11)}<span class="t"><b>${esc(c.name)}</b><span class="${st.m ? 'warn' : ''}">${st.total} ${plural(st.total, 'lezione', 'lezioni')} · ${st.m ? st.m + ' mai ' + plural(st.m, 'recuperata', 'recuperate') : 'in pari'}</span></span>${I.chev(14, 2.8, 'chev')}</a></li>`;
         }).join('')}</ul>` : ''}
       </div>`;
     }).join('')}</div>`).join('');
@@ -549,14 +586,14 @@ function archCourseBody(c, withBar) {
   const st = stats(c);
   const sem = semById(c.semId);
   const meta = [sem ? `${sem.title} ${sem.year}` : '', c.cfu ? c.cfu + ' CFU' : ''].filter(Boolean).join(' · ');
-  const ST = { S: 'Presente', M: 'Non recuperata', R: 'Recuperata' };
+  const ST = { S: 'Presente', M: 'Mai recuperata', R: 'Recuperata' };
   const rows = st.L.map((l, i) => ({ l, n: i + 1 })).reverse();
   return `
     ${withBar ? `<div class="topbar between"><a class="glass gbtn circle" href="#/archivio" aria-label="Indietro: Archivio">${I.back()}</a><span class="ro-badge">${I.lock()}Sola lettura</span></div>` : ''}
     <header class="chead" style="padding-top:10px">${codeIcon(c, 52, 14, 18)}<div style="display:flex;flex-direction:column;gap:2px;min-width:0"><h1>${esc(c.name)}</h1><span class="sub">${esc(meta)}</span></div></header>
     <section class="card stats mx" style="margin-top:18px;gap:14px">
-      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="val">${st.inPari} / ${st.total}</span></div>${segBar(st.L)}</div>
-      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${notesLabel(st)}</span></div>${notesBar(pct(st.upTo, st.total), false)}</div>
+      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--blueText)">Lezioni in pari</span><span class="val">${st.onTrack} / ${st.total}</span></div>${segBar(st.L)}</div>
+      <div class="meter" style="gap:7px"><div class="meter-head"><span style="color:var(--mintText)">Appunti sistemati</span><span class="val">${notesLabel(st)}</span></div>${notesBar(pct(st.done, st.total), false)}</div>
       <button class="restore" data-act="restore" data-id="${c.id}">${I.restore()}Ripristina nel semestre attuale</button>
     </section>
     ${courseExamLink(c)}
@@ -720,10 +757,10 @@ function sideOpen() { return ui.side == null ? window.innerWidth >= 1100 : ui.si
 function wideCard(c, sel) {
   const st = stats(c);
   return `<a class="wcard ${sel ? 'on' : ''}" href="#/corso/${c.id}" aria-current="${sel}">
-    <span class="r1">${badged(codeIcon(c, 30, 8, 11), st.m)}<span class="nm">${esc(c.name)}</span><b>${st.inPari}<small> / ${st.total}</small></b></span>
+    <span class="r1">${badged(codeIcon(c, 30, 8, 11), st.m)}<span class="nm">${esc(c.name)}</span><b>${st.onTrack}<small> / ${st.total}</small></b></span>
     ${segBar(st.L, 7)}
-    ${notesBar(pct(st.upTo, st.total), false, 7)}
-    <span class="r3"><span>${!st.total ? 'Nessuna lezione' : st.upTo === st.total ? 'Appunti: tutti sistemati' : 'Appunti fermi alla Lez. ' + st.upTo}</span>${st.m ? `<b class="miss-pill">${I.warn(11)}${st.m} da recuperare</b>` : '<b style="color:var(--blueText)">In pari</b>'}</span>
+    ${notesBar(pct(st.done, st.total), false, 7)}
+    <span class="r3"><span>${!st.total ? 'Nessuna lezione' : st.done === st.total ? 'Appunti: tutti sistemati' : `Appunti ${st.done} su ${st.total}`}</span>${st.m ? `<b class="miss-pill">${I.warn(11)}${st.m} da recuperare</b>` : '<b style="color:var(--blueText)">In pari</b>'}</span>
   </a>`;
 }
 function viewWide(r) {
@@ -761,7 +798,8 @@ function viewWide(r) {
     else body = `<div class="wcols">
       <section class="wover" data-scroll="over" aria-label="Panoramica">
         ${semesterHead(sem).replace('class="head"', 'class="head" style="padding:4px 4px 6px"')}
-        <div class="card wsum">${ringsFor(semStats(courses), 104, "sem")}<div class="summary-nums" style="gap:10px">
+        ${checkinCard().replace('card checkin mx', 'card checkin')}
+        <div class="card wsum"><button class="ring-btn" data-act="rings-help" aria-label="Cosa significano gli anelli">${ringsFor(semStats(courses), 104, "sem")}</button><div class="summary-nums" style="gap:10px">
           <div class="knum"><span class="klabel" style="color:${semStats(courses).m ? 'var(--orangeText)' : 'var(--label2)'}">Da recuperare</span><span class="kval ${semStats(courses).m ? 'alert' : ''}">${semStats(courses).m} <small>lezioni</small></span></div>
           <div class="knum"><span class="klabel" style="color:var(--mintText)">Appunti da sistemare</span><span class="kval">${semStats(courses).gap} <small>lezioni</small></span></div>
         </div></div>
@@ -807,7 +845,7 @@ function sheetLesson(s) {
   }
   const pres = isNew
     ? [['S', 'Sì, presente', 'blue', I.check(14)], ['M', 'Da recuperare', 'orange', I.warn(13)]]
-    : [['S', 'Presente', 'blue', I.check(14)], ['M', 'Saltata', 'orange', I.warn(13)], ['R', 'Recuperata', 'blue', I.recup(14)]];
+    : [['S', 'Presente', 'blue', I.check(14)], ['M', 'Da recuperare', 'orange', I.warn(13)], ['R', 'Recuperata', 'blue', I.recup(14)]];
   return `${sheetHead(isNew ? 'Nuova lezione' : 'Modifica lezione', 'save-lesson', !c)}
     ${isNew ? `<div class="chips" role="radiogroup" aria-label="Corso">${courses.map((x) => `<button class="chip ${x.id === s.courseId ? 'on' : ''}" role="radio" aria-checked="${x.id === s.courseId}" data-act="sfield" data-field="courseId" data-value="${x.id}">${codeIcon(x, 28, 14, 11)}${esc(x.name)}</button>`).join('')}</div>` : ''}
     <div class="group">
@@ -889,7 +927,7 @@ function sheetConclude() {
     <div class="conc-head"><h2 id="sheet-title">Concludi il ${esc(sem.title)}</h2><p>${courses.length === 1 ? 'Il corso passa' : `I ${courses.length} corsi passano`} in Archivio e la Home si svuota per il nuovo semestre.</p></div>
     <div class="card conc-stats">${ringsFor(ss, RING_SIZE, "conc")}<div class="conc-grid">
       <div><span>Lezioni</span><b>${ss.total}</b></div>
-      <div><span style="color:var(--blueText)">In pari</span><b>${pct(ss.inPari, ss.total)}<small>%</small></b></div>
+      <div><span style="color:var(--blueText)">In pari</span><b>${pct(ss.onTrack, ss.total)}<small>%</small></b></div>
       <div><span style="color:var(--orangeText)">Da recuperare</span><b>${ss.m}</b></div>
       <div><span style="color:var(--mintText)">Appunti</span><b>${pct(ss.notes, ss.total)}<small>%</small></b></div>
     </div></div>
@@ -942,29 +980,108 @@ function sheetDegree(s) {
     <div class="chips">${DEGREES.map(([v, t, y]) => `<button class="chip plain ${s.degreeCfu === String(v) ? 'on' : ''}" data-act="sfield" data-field="degreeCfu" data-value="${v}">${v} · ${cap(t.replace('Laurea ', '').replace('Magistrale a ciclo unico', 'Ciclo unico ' + y))}</button>`).join('')}</div>
     <p class="sheet-note">Di solito 180 CFU per la triennale e 120 per la magistrale. L'anello del Libretto si chiude quando li hai acquisiti tutti.</p>`;
 }
+function sheetCheckin(s) {
+  const byDate = {};
+  s.items.forEach((it, i) => { (byDate[it.date] = byDate[it.date] || []).push(i); });
+  const miss = s.items.filter((it) => it.p === 'M').length;
+  return `${sheetHead('Conferma presenze', 'save-checkin', false, 'Conferma')}
+    <p class="sheet-note">Tocca le lezioni che non hai seguito: passano tra quelle da recuperare.</p>
+    <div class="chips"><button class="chip plain" data-act="ck-every" data-value="S">Tutte presenti</button><button class="chip plain" data-act="ck-every" data-value="M">Tutte da recuperare</button></div>
+    ${Object.keys(byDate).sort().map((d) => `<div class="fgroup"><span class="field-label">${esc(dayName(d))}</span><div class="group">${byDate[d].map((i) => {
+      const it = s.items[i], c = courseById(it.cid);
+      return `<div class="grow ck-row">${codeIcon(c, 30, 8, 11)}<span class="n">${esc(c.name)}</span>${sseg('ck', [['S', 'Presente', 'blue', I.check(14)], ['M', 'Da recuperare', 'orange', I.warn(13)]], it.p).replace(/data-act="sfield" data-field="ck"/g, `data-act="ck-set" data-i="${i}"`)}</div>`;
+    }).join('')}</div></div>`).join('')}
+    <p class="past-sum">${miss ? `<b>${miss} da recuperare</b> · ${s.items.length - miss} ${plural(s.items.length - miss, 'presente', 'presenti')}` : `<b>Tutte presenti</b>`}</p>`;
+}
+function sheetRings() {
+  const ss = semStats(curCourses());
+  const row = (color, icon, title, txt) => `<li class="rh-row"><span class="rh-ico" style="background:${color}">${icon}</span><span class="t"><b>${title}</b><span>${txt}</span></span></li>`;
+  return `${sheetHead('Gli anelli')}
+    <div class="rh-ring">${ringsFor(ss, 104, 'help')}</div>
+    <ul class="card rh-list">
+      ${row('var(--blue)', I.check(16, 3), 'Anello esterno, blu: lezioni in pari', `Quelle seguite o recuperate: ${ss.onTrack} su ${ss.total}.`)}
+      ${row('var(--orange)', I.warn(15), 'Tratto arancione: da recuperare', `Lezioni perse e non ancora recuperate: ${ss.m}. Più è lungo, più sei indietro.`)}
+      ${row('var(--mint)', I.doc(15), 'Anello interno, menta: appunti sistemati', `Lezioni con gli appunti a posto: ${ss.notes} su ${ss.total}.`)}
+    </ul>
+    <p class="sheet-note">Gli anelli si chiudono quando sei in pari con tutte le lezioni e con tutti gli appunti del semestre.</p>`;
+}
+function sheetConfirm(s) {
+  return `<div class="sheet-head"><button class="gbtn circle close" data-act="close-sheet" aria-label="Chiudi">${I.close()}</button><span class="spacer"></span></div>
+    <div class="conc-head"><h2 id="sheet-title">${esc(s.title)}</h2>${s.msg ? `<p>${esc(s.msg)}</p>` : ''}</div>
+    <div class="conf-btns"><button class="primary ${s.danger ? 'danger' : ''}" data-act="confirm-ok">${esc(s.ok)}</button>
+    <button class="plain-btn" data-act="close-sheet">Annulla</button></div>`;
+}
 function renderSheet() {
   const root = $('#sheet-root');
   const s = ui.sheet;
-  if (!s) { root.innerHTML = ''; return; }
+  // Con un foglio aperto la pagina sotto è inerte: VoiceOver e la tastiera restano nel foglio.
+  app.inert = !!s;
+  syncBack();
+  if (!s) {
+    root.innerHTML = '';
+    const el = sheetOpener && app.querySelector(sheetOpener);
+    sheetOpener = null;
+    if (el) el.focus({ preventScroll: true });
+    return;
+  }
   const prev = root.querySelector('.sheet');
   const scroll = prev ? prev.scrollTop : 0;
-  const html = { lesson: sheetLesson, course: sheetCourse, semester: sheetSemester, conclude: sheetConclude, past: sheetPast, exam: sheetExam, target: sheetTarget, degree: sheetDegree }[s.type](s);
+  const focused = !ui.sheetNew && prev && prev.contains(document.activeElement) ? selectorOf(document.activeElement) : null;
+  const html = { lesson: sheetLesson, course: sheetCourse, semester: sheetSemester, conclude: sheetConclude, past: sheetPast, exam: sheetExam, target: sheetTarget, degree: sheetDegree, confirm: sheetConfirm, checkin: sheetCheckin, rings: sheetRings }[s.type](s);
   const full = s.type === 'conclude' && !wideMQ.matches;
   root.innerHTML = `<div class="backdrop" data-act="close-sheet"></div><section class="sheet ${full ? 'full' : ''} ${ui.sheetNew ? 'anim' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="grabber" aria-hidden="true"></div>${html}</section>`;
-  root.querySelector('.sheet').scrollTop = scroll;
+  const sheet = root.querySelector('.sheet');
+  sheet.scrollTop = scroll;
+  // Il foglio viene ridisegnato a ogni scelta: il focus torna sullo stesso controllo, o sul titolo se è nuovo.
+  const again = focused && sheet.querySelector(focused);
+  if (again) again.focus({ preventScroll: true });
+  else if (ui.sheetNew) { const t = sheet.querySelector('#sheet-title'); if (t) { t.tabIndex = -1; t.focus({ preventScroll: true }); } }
   ui.sheetNew = false;
 }
-function openSheet(s) { ui.sheet = s; ui.sheetNew = true; renderSheet(); }
+// App Android: il tasto Indietro serve alla pagina solo se c'è un foglio aperto o non sei nella Home.
+let canBack = null;
+function syncBack() {
+  const can = !!ui.sheet || route().name !== 'home';
+  if (can === canBack || !window.ProcedoAndroid || !window.ProcedoAndroid.setCanGoBack) return;
+  canBack = can;
+  window.ProcedoAndroid.setCanGoBack(can);
+}
+// Selettore per ritrovare lo stesso controllo dopo che la pagina o il foglio sono stati ridisegnati.
+function selectorOf(el) {
+  if (!el || el === document.body) return null;
+  if (el.id) return '#' + CSS.escape(el.id);
+  const d = el.dataset || {};
+  const parts = ['act', 'id', 'field', 'value', 'filter', 'course', 'i'].filter((k) => d[k] != null).map((k) => `[data-${k}="${CSS.escape(d[k])}"]`);
+  return parts.length ? el.tagName.toLowerCase() + parts.join('') : null;
+}
+let sheetOpener = null;
+function openSheet(s) {
+  if (!ui.sheet) sheetOpener = selectorOf(document.activeElement);
+  ui.sheet = s; ui.sheetNew = true; renderSheet();
+}
 function closeSheet() { ui.sheet = null; renderSheet(); }
 
 /* ---------- Toast ---------- */
-let toastTimer = null;
-function toast(msg, bad) {
+// Con `undo` l'avviso ha il pulsante Annulla e resta più a lungo (e finché il focus è sul pulsante).
+let toastTimer = null, undoFn = null;
+function hideToast() { clearTimeout(toastTimer); $('#toast-root').innerHTML = ''; undoFn = null; }
+function toast(msg, bad, undo) {
   const root = $('#toast-root');
-  root.innerHTML = `<div class="toast glass" role="status"><span class="ck" style="${bad ? 'background:var(--red)' : ''}">${bad ? I.warn(14) : I.check(14, 3)}</span>${esc(msg)}</div>`;
+  undoFn = undo || null;
+  root.innerHTML = `<div class="toast glass ${undo ? 'has-undo' : ''}" role="status"><span class="ck" style="${bad ? 'background:var(--red)' : ''}">${bad ? I.warn(14) : I.check(14, 3)}</span><span class="tmsg">${esc(msg)}</span>${undo ? '<button class="undo" data-act="undo">Annulla</button>' : ''}</div>`;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { root.innerHTML = ''; }, 2600);
+  toastTimer = setTimeout(hideToast, undo ? 5000 : 2600);
 }
+$('#toast-root').addEventListener('focusin', () => clearTimeout(toastTimer));
+$('#toast-root').addEventListener('focusout', () => { clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 2000); });
+// Applica una modifica e propone di annullarla: ripristina lo stato com'era prima.
+function undoable(msg, fn) {
+  const snap = JSON.stringify(S);
+  commit(fn);
+  toast(msg, false, () => { S = migrate(JSON.parse(snap)); save(); render(); toast('Modifica annullata'); });
+}
+// Conferma nello stile dell'app (al posto di confirm() del browser).
+function ask(o) { openSheet(Object.assign({ type: 'confirm', ok: 'Conferma', danger: false }, o)); }
 
 /* ---------- Render e routing ---------- */
 const app = $('#app');
@@ -983,7 +1100,7 @@ function applyTheme() {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   const meta = $('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', dark ? '#000000' : '#F2F2F7');
-  if (window.PariAndroid) window.PariAndroid.setTheme(dark);
+  if (window.ProcedoAndroid) window.ProcedoAndroid.setTheme(dark);
 }
 function render() {
   applyTheme();
@@ -1049,6 +1166,11 @@ wideMQ.addEventListener('change', render);
 darkMQ.addEventListener('change', applyTheme);
 
 /* ---------- Azioni ---------- */
+function toggleNotes(cid, lid) {
+  const l = findLesson(cid, lid);
+  if (!l) return;
+  undoable(`Appunti lezione ${lessonNum(courseById(cid), lid)} · ${l.a ? 'da sistemare' : 'sistemati'}`, () => { l.a = !l.a; });
+}
 function findLesson(cid, lid) { const c = courseById(cid); return c ? c.lessons.find((l) => l.id === lid) : null; }
 function goCourse(id, filter) {
   ui.filter = filter || 'all';
@@ -1106,7 +1228,7 @@ function saveLesson() {
       c.lessons.push({ id: uid(), date: s.date || todayISO(), topic, p: s.p, a: s.a, t: Date.now() });
     } else {
       const l = c.lessons.find((x) => x.id === s.lessonId);
-      if (l) Object.assign(l, { date: s.date || l.date, topic, p: s.p, a: s.a });
+      if (l) { Object.assign(l, { date: s.date || l.date, topic, p: s.p, a: s.a }); delete l.chk; }
     }
     ui.sheet = null;
   });
@@ -1151,31 +1273,34 @@ function doConclude() {
   const sem = curSem();
   if (!sem) return;
   const next = nextSemesterOf(sem);
+  const snap = JSON.stringify(S);
   commit(() => {
     sem.status = 'archived'; sem.archivedAt = Date.now();
     S.semesters.push({ id: uid(), title: next.title, year: next.year, status: 'current', createdAt: Date.now() });
     ui.sheet = null; ui.sel = null; ui.open[sem.id] = true;
   });
   if (location.hash !== '#/' && location.hash !== '') location.hash = '#/';
-  toast(`${sem.title} archiviato`);
+  toast(`${sem.title} archiviato`, false, () => { S = migrate(JSON.parse(snap)); save(); render(); toast('Semestre ripristinato'); });
 }
 function restoreCourse(id) {
   const sem = curSem();
   const c = courseById(id);
-  if (!sem || !c) { alert('Crea prima un semestre attuale dalle Impostazioni.'); return; }
-  if (!confirm(`Ripristinare “${c.name}” nel ${sem.title}?`)) return;
-  commit(() => { c.semId = sem.id; c.autoUntil = todayISO(); });
+  if (!sem || !c) { toast('Crea prima un semestre attuale dalle Impostazioni', true); return; }
+  undoable(`“${c.name}” ripristinato nel ${sem.title}`, () => { c.semId = sem.id; c.autoUntil = todayISO(); });
   location.hash = '#/corso/' + id;
-  toast('Corso ripristinato');
 }
 function deleteCourse(id) {
   const c = courseById(id);
   if (!c) return;
-  if (!confirm(`Eliminare “${c.name}” e tutte le sue ${c.lessons.length} lezioni? L'operazione non si può annullare.`)) return;
-  const wasArch = route().name === 'arch-corso';
-  commit(() => { S.courses = S.courses.filter((x) => x.id !== id); ui.sheet = null; });
-  location.hash = wasArch ? '#/archivio' : '#/';
-  toast('Corso eliminato');
+  const n = c.lessons.length;
+  ask({
+    title: `Eliminare “${c.name}”?`, msg: `Spariscono anche le sue ${n} ${plural(n, 'lezione', 'lezioni')}. Avrai pochi secondi per annullare.`, ok: 'Elimina corso', danger: true,
+    onOk: () => {
+      const wasArch = route().name === 'arch-corso';
+      undoable(`“${c.name}” eliminato`, () => { S.courses = S.courses.filter((x) => x.id !== id); });
+      location.hash = wasArch ? '#/archivio' : '#/';
+    }
+  });
 }
 function newExam(courseId) {
   const c = courseId ? courseById(courseId) : null;
@@ -1233,9 +1358,9 @@ function setDegree(v) {
 }
 async function exportData() {
   const name = `procedo-backup-${todayISO()}.json`;
-  const json = JSON.stringify({ app: 'pari', version: 1, exportedAt: new Date().toISOString(), state: S }, null, 2);
+  const json = JSON.stringify({ app: 'procedo', version: 1, exportedAt: new Date().toISOString(), state: S }, null, 2);
   // App Android: salva il file con il selettore di sistema (la WebView non supporta share/download).
-  if (window.PariAndroid) { window.PariAndroid.saveFile(name, json); return; }
+  if (window.ProcedoAndroid) { window.ProcedoAndroid.saveFile(name, json); return; }
   const file = new File([json], name, { type: 'application/json' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], title: 'Backup Procedo' }); return; }
@@ -1254,10 +1379,10 @@ function importData(file) {
     const st = obj && obj.state ? obj.state : obj;
     if (!st || !Array.isArray(st.semesters) || !Array.isArray(st.courses)) { toast('Non è un backup di Procedo', true); return; }
     const n = st.courses.length;
-    if (!confirm(`Importare il backup (${n} ${plural(n, 'corso', 'corsi')})? I dati attuali su questo dispositivo verranno sostituiti.`)) return;
-    S = migrate(st); save(); ui.sel = null;
-    location.hash = '#/'; render();
-    toast('Backup importato');
+    ask({
+      title: 'Importare il backup?', msg: `Contiene ${n} ${plural(n, 'corso', 'corsi')}. I dati attuali su questo dispositivo verranno sostituiti.`, ok: 'Importa e sostituisci', danger: true,
+      onOk: () => { undoable('Backup importato', () => { S = migrate(st); ui.sel = null; }); location.hash = '#/'; }
+    });
   };
   rd.readAsText(file);
 }
@@ -1282,8 +1407,9 @@ const ACT = {
   'weeks-set': (d) => { ui.sheet.weeks = clampWeeks(+d.value); renderSheet(); },
   'delete-lesson': () => {
     const s = ui.sheet;
-    if (!confirm('Eliminare questa lezione?')) return;
-    commit(() => { const c = courseById(s.courseId); c.lessons = c.lessons.filter((l) => l.id !== s.lessonId); ui.sheet = null; });
+    const c = courseById(s.courseId);
+    const n = lessonNum(c, s.lessonId);
+    undoable(`Lezione ${n} eliminata`, () => { c.lessons = c.lessons.filter((l) => l.id !== s.lessonId); ui.sheet = null; });
   },
   'delete-course': (d) => deleteCourse(d.id || (ui.sheet && ui.sheet.id)),
   'new-exam': (d) => newExam(d.course),
@@ -1292,10 +1418,9 @@ const ACT = {
   'save-exam': saveExam,
   'delete-exam': () => {
     const s = ui.sheet;
-    if (!confirm('Eliminare questo esame dal Libretto?')) return;
-    commit(() => { S.exams = S.exams.filter((e) => e.id !== s.id); ui.sheet = null; });
+    undoable('Esame eliminato dal Libretto', () => { S.exams = S.exams.filter((e) => e.id !== s.id); ui.sheet = null; });
   },
-  'clear-sim': () => commit(() => { S.exams.forEach((e) => { e.sim = null; }); }),
+  'clear-sim': () => undoable('Voti simulati azzerati', () => { S.exams.forEach((e) => { e.sim = null; }); }),
   'edit-target': () => openSheet({ type: 'target', target: S.target ? fmtNum(S.target) : '', degreeCfu: S.degreeCfu ? String(S.degreeCfu) : '' }),
   'save-target': saveTarget,
   'set-degree': (d) => setDegree(d.value),
@@ -1308,8 +1433,39 @@ const ACT = {
     if (s.type === 'semester' && d.field === 'title' && !s.startTouched) s.start = guessStart(s.title, s.year);
     renderSheet();
   },
-  'cycle': (d) => commit(() => { const l = findLesson(d.course, d.id); if (l) l.p = { S: 'M', M: 'R', R: 'S' }[l.p]; }),
-  'toggle-a': (d) => commit(() => { const l = findLesson(d.course, d.id); if (l) l.a = !l.a; }),
+  'cycle': (d) => {
+    const l = findLesson(d.course, d.id);
+    if (!l) return;
+    const p = { S: 'M', M: 'R', R: 'S' }[l.p];
+    undoable(`Lezione ${lessonNum(courseById(d.course), l.id)} · ${P_LABEL[p]}`, () => { l.p = p; delete l.chk; });
+  },
+  'toggle-a': (d) => toggleNotes(d.course, d.id),
+  'rings-help': () => openSheet({ type: 'rings' }),
+  'checkin-all': () => {
+    const P = pendingLessons();
+    undoable(`${P.length} ${plural(P.length, 'lezione confermata', 'lezioni confermate')} · presente`, () => { P.forEach(({ l }) => { l.p = 'S'; delete l.chk; }); });
+  },
+  'checkin-open': () => {
+    const P = pendingLessons();
+    if (P.length === 1) {
+      const { l } = P[0];
+      undoable('Lezione segnata da recuperare', () => { l.p = 'M'; delete l.chk; });
+      return;
+    }
+    openSheet({ type: 'checkin', items: P.map(({ c, l }) => ({ cid: c.id, lid: l.id, date: l.date, p: l.p === 'M' ? 'M' : 'S' })) });
+  },
+  'ck-set': (d) => { ui.sheet.items[+d.i].p = d.value; renderSheet(); },
+  'ck-every': (d) => { ui.sheet.items.forEach((it) => { it.p = d.value; }); renderSheet(); },
+  'save-checkin': () => {
+    const s = ui.sheet;
+    const miss = s.items.filter((it) => it.p === 'M').length;
+    undoable(`Presenze confermate${miss ? ` · ${miss} da recuperare` : ''}`, () => {
+      s.items.forEach((it) => { const l = findLesson(it.cid, it.lid); if (l) { l.p = it.p; delete l.chk; } });
+      ui.sheet = null;
+    });
+  },
+  'undo': () => { const fn = undoFn; hideToast(); if (fn) fn(); },
+  'confirm-ok': () => { const s = ui.sheet; closeSheet(); if (s && s.onOk) s.onOk(); },
   'filter': (d) => { ui.filter = d.filter; render(); },
   'goto-filter': (d) => goCourse(d.id, d.filter),
   'goto-notes': (d) => goCourse(d.id, 'notes'),
@@ -1321,12 +1477,13 @@ const ACT = {
   'toggle-side': () => { ui.side = !sideOpen(); render(); },
   'export': exportData,
   'import': () => { const inp = $('#import-file'); inp.value = ''; inp.click(); },
-  'wipe': () => {
-    if (!confirm('Cancellare tutti i semestri, i corsi, le lezioni e il libretto da questo dispositivo?')) return;
-    if (!confirm('Sei sicuro? Se non hai un backup, i dati andranno persi.')) return;
-    S = defaultState(); save(); ui.sel = null; location.hash = '#/'; render();
-    toast('Dati cancellati');
-  }
+  'wipe': () => ask({
+    title: 'Cancellare tutti i dati?', msg: 'Semestri, corsi, lezioni e Libretto verranno tolti da questo dispositivo.', ok: 'Continua', danger: true,
+    onOk: () => ask({
+      title: 'Sei sicuro?', msg: 'Se non hai un backup, i dati andranno persi. Avrai pochi secondi per annullare.', ok: 'Cancella tutti i dati', danger: true,
+      onOk: () => { undoable('Dati cancellati', () => { S = defaultState(); ui.sel = null; }); location.hash = '#/'; }
+    })
+  })
 };
 
 let suppressClick = 0;
@@ -1378,7 +1535,8 @@ document.addEventListener('touchstart', (e) => {
   const fg = e.target.closest('.lrow-fg');
   if (!fg || e.touches.length > 1) { sw = null; return; }
   const t = e.touches[0];
-  sw = { fg, row: fg.parentElement, x: t.clientX, y: t.clientY, dx: 0, active: false, dead: false, armed: false };
+  // "Recuperata" (scorrimento a destra) ha senso solo per le lezioni da recuperare.
+  sw = { fg, row: fg.parentElement, x: t.clientX, y: t.clientY, dx: 0, active: false, dead: false, armed: false, canRecup: fg.parentElement.classList.contains('miss') };
 }, { passive: true });
 document.addEventListener('touchmove', (e) => {
   if (!sw || sw.dead) return;
@@ -1391,11 +1549,13 @@ document.addEventListener('touchmove', (e) => {
   }
   e.preventDefault();
   sw.dx = dx;
-  const lim = Math.max(-170, Math.min(170, dx));
+  const blocked = dx > 0 && !sw.canRecup;
+  // Verso destra su una lezione non da recuperare la riga resiste e torna indietro, senza azione.
+  const lim = blocked ? Math.min(24, dx * 0.2) : Math.max(-170, Math.min(170, dx));
   sw.fg.style.transform = `translateX(${lim}px)`;
-  sw.row.classList.toggle('sw-right', dx > 0);
+  sw.row.classList.toggle('sw-right', dx > 0 && !blocked);
   sw.row.classList.toggle('sw-left', dx < 0);
-  const armed = Math.abs(dx) >= SWIPE_T;
+  const armed = !blocked && Math.abs(dx) >= SWIPE_T;
   if (armed !== sw.armed) { sw.armed = armed; sw.row.classList.toggle('sw-armed', armed); if (armed && navigator.vibrate) navigator.vibrate(8); }
 }, { passive: false });
 function endSwipe() {
@@ -1408,8 +1568,10 @@ function endSwipe() {
   s.fg.style.transform = '';
   const { id, course } = s.row.dataset;
   setTimeout(() => {
-    if (s.dx >= SWIPE_T) commit(() => { const l = findLesson(course, id); if (l) l.p = 'R'; });
-    else if (s.dx <= -SWIPE_T) commit(() => { const l = findLesson(course, id); if (l) l.a = !l.a; });
+    if (s.dx >= SWIPE_T && s.canRecup) {
+      const l = findLesson(course, id);
+      if (l) undoable(`Lezione ${lessonNum(courseById(course), id)} · Recuperata`, () => { l.p = 'R'; delete l.chk; });
+    } else if (s.dx <= -SWIPE_T) toggleNotes(course, id);
     else s.row.classList.remove('sw-right', 'sw-left', 'sw-armed');
   }, 200);
 }
@@ -1418,12 +1580,12 @@ document.addEventListener('touchcancel', endSwipe);
 
 /* ---------- App Android (wrapper WebView) ---------- */
 // Tasto Indietro: chiude il foglio aperto, poi torna alla schermata precedente; false = esci dall'app.
-window.pariBack = () => {
+window.procedoBack = () => {
   if (ui.sheet) { closeSheet(); return true; }
   if (route().name !== 'home') { if (history.length > 1) history.back(); else location.hash = '#/'; return true; }
   return false;
 };
-window.pariSaved = (ok) => toast(ok ? 'Backup salvato' : 'Impossibile salvare il backup', !ok);
+window.procedoSaved = (ok) => toast(ok ? 'Backup salvato' : 'Impossibile salvare il backup', !ok);
 
 /* ---------- Avvio ---------- */
 render();
